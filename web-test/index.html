@@ -1,0 +1,1624 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>烧烤食材店 - 小程序测试页面</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5; padding-bottom: 60px; }
+    .container { max-width: 480px; margin: 0 auto; background: #fff; min-height: 100vh; }
+    
+    /* 轮播图 */
+    .banner { width: 100%; height: 180px; background: linear-gradient(135deg, #e74c3c, #c0392b); display: flex; align-items: center; justify-content: center; color: #fff; font-size: 24px; font-weight: bold; }
+    
+    /* 搜索栏 */
+    .search-section { padding: 15px; background: #fff; }
+    .search-box { display: flex; align-items: center; background: #f5f5f5; border-radius: 20px; padding: 10px 15px; }
+    .search-box input { flex: 1; border: none; background: transparent; font-size: 14px; outline: none; }
+    .search-box button { background: #e74c3c; color: #fff; border: none; padding: 6px 16px; border-radius: 15px; cursor: pointer; font-size: 14px; }
+    
+    /* 分类 */
+    .section { padding: 15px; border-bottom: 1px solid #eee; }
+    .section-title { font-size: 16px; font-weight: 500; margin-bottom: 12px; color: #333; }
+    .category-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+    .category-item { text-align: center; padding: 15px 10px; background: #f9f9f9; border-radius: 8px; cursor: pointer; transition: all 0.2s; }
+    .category-item:active { transform: scale(0.95); }
+    .category-item.active { background: #e74c3c; color: #fff; }
+    .category-icon { font-size: 32px; margin-bottom: 5px; }
+    .category-name { font-size: 12px; }
+    
+    /* 商品列表 */
+    .product-item { display: flex; background: #fff; border-radius: 8px; margin-bottom: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.08); cursor: pointer; transition: all 0.2s; }
+    .product-item:active { transform: scale(0.98); }
+    .product-image { width: 100px; height: 100px; background: linear-gradient(135deg, #667eea, #764ba2); display: flex; align-items: center; justify-content: center; color: #fff; font-size: 32px; flex-shrink: 0; }
+    .product-info { flex: 1; padding: 12px; display: flex; flex-direction: column; justify-content: space-between; }
+    .product-name { font-size: 14px; font-weight: 500; color: #333; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .product-desc { font-size: 12px; color: #999; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .product-bottom { display: flex; align-items: baseline; justify-content: space-between; }
+    .product-price { color: #e74c3c; font-size: 16px; font-weight: bold; }
+    .original-price { color: #999; font-size: 12px; text-decoration: line-through; margin-left: 5px; }
+    .product-sales { font-size: 11px; color: #999; }
+    .add-cart-btn { background: #e74c3c; color: #fff; border: none; width: 28px; height: 28px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 16px; }
+    
+    /* 测试结果 */
+    .test-result { background: #f8f9fa; margin: 15px; padding: 15px; border-radius: 8px; }
+    .test-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #eee; }
+    .test-item:last-child { border-bottom: none; }
+    .status-ok { color: #27ae60; }
+    .status-error { color: #e74c3c; }
+    .test-time { font-size: 12px; color: #999; }
+    
+    /* 底部导航 */
+    .tab-bar { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 480px; display: flex; background: #fff; border-top: 1px solid #eee; padding-bottom: env(safe-area-inset-bottom); }
+    .tab-item { flex: 1; text-align: center; padding: 10px 0; color: #999; cursor: pointer; transition: all 0.2s; }
+    .tab-item:active { background: #f5f5f5; }
+    .tab-item.active { color: #e74c3c; }
+    .tab-icon { font-size: 22px; display: block; margin-bottom: 2px; }
+    .tab-label { font-size: 11px; }
+    
+    /* 页面切换 */
+    .page { display: none; }
+    .page.active { display: block; }
+    
+    /* 订单列表 */
+    .order-item { background: #fff; margin: 12px; padding: 15px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+    .order-header { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 13px; }
+    .order-status { color: #e74c3c; }
+    .order-goods { display: flex; gap: 10px; margin: 10px 0; }
+    .order-goods .product-image { width: 60px; height: 60px; font-size: 20px; }
+    .order-total { text-align: right; color: #e74c3c; font-weight: bold; }
+    .order-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 10px; }
+    .order-btn { padding: 6px 16px; border-radius: 4px; font-size: 13px; cursor: pointer; border: 1px solid #e74c3c; background: #fff; color: #e74c3c; }
+    .order-btn.primary { background: #e74c3c; color: #fff; border: none; }
+    
+    /* 个人中心 */
+    .user-header { background: linear-gradient(135deg, #e74c3c, #c0392b); color: #fff; padding: 30px 20px; }
+    .user-info { display: flex; align-items: center; gap: 15px; }
+    .avatar { width: 60px; height: 60px; border-radius: 50%; background: rgba(255,255,255,0.3); display: flex; align-items: center; justify-content: center; font-size: 28px; }
+    .nickname { font-size: 18px; font-weight: bold; }
+    .login-btn { background: rgba(255,255,255,0.2); border: none; color: #fff; padding: 8px 20px; border-radius: 20px; cursor: pointer; }
+    
+    .menu-list { background: #fff; margin: 15px; border-radius: 8px; overflow: hidden; }
+    .menu-item { display: flex; justify-content: space-between; align-items: center; padding: 15px; border-bottom: 1px solid #f5f5f5; cursor: pointer; }
+    .menu-item:last-child { border-bottom: none; }
+    .menu-item:active { background: #f9f9f9; }
+    
+    /* 加载状态 */
+    .loading { text-align: center; padding: 20px; color: #999; }
+    .empty { text-align: center; padding: 40px 20px; color: #999; }
+    
+    /* Toast 提示 */
+    .toast { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.8); color: #fff; padding: 12px 24px; border-radius: 8px; font-size: 14px; z-index: 1000; display: none; }
+    .toast.show { display: block; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- 首页 -->
+    <div id="page-home" class="page active">
+      <div class="banner">🔥 烧烤食材热卖中 🔥</div>
+      
+      <div class="search-section">
+        <div class="search-box">
+          <span style="color: #999; margin-right: 8px;">🔍</span>
+          <input type="text" id="searchInput" placeholder="搜索烧烤食材">
+          <button onclick="handleSearch()">搜索</button>
+        </div>
+      </div>
+      
+      <div class="section">
+        <div class="section-title">分类导航</div>
+        <div class="category-grid" id="categoryGrid"></div>
+      </div>
+      
+      <div class="section">
+        <div class="section-title">热销推荐</div>
+        <div id="productList"></div>
+      </div>
+      
+      <div class="test-result">
+        <div class="section-title">📊 API 测试结果</div>
+        <div id="testResults"></div>
+      </div>
+    </div>
+    
+    <!-- 商城页 -->
+    <div id="page-shop" class="page">
+      <div class="search-section">
+        <div class="search-box">
+          <span style="color: #999; margin-right: 8px;">🔍</span>
+          <input type="text" id="shopSearchInput" placeholder="搜索商品">
+          <button onclick="handleShopSearch()">搜索</button>
+        </div>
+      </div>
+      <div class="section" id="shopCategorySection">
+        <div class="section-title">分类</div>
+        <div class="category-grid" id="shopCategoryGrid"></div>
+      </div>
+      <div class="section">
+        <div class="section-title">全部商品</div>
+        <div id="shopProductList"></div>
+      </div>
+    </div>
+    
+    <!-- 订单页 -->
+    <div id="page-order" class="page">
+      <div class="section">
+        <div class="section-title">订单状态</div>
+        <div style="display: flex; gap: 10px; overflow-x: auto; padding-bottom: 10px;">
+          <button class="order-btn active" onclick="filterOrder('all')">全部</button>
+          <button class="order-btn" onclick="filterOrder('0')">待付款</button>
+          <button class="order-btn" onclick="filterOrder('1')">待发货</button>
+          <button class="order-btn" onclick="filterOrder('2')">待收货</button>
+          <button class="order-btn" onclick="filterOrder('3')">已完成</button>
+        </div>
+      </div>
+      <div id="orderList"></div>
+    </div>
+    
+    <!-- 订单确认页 -->
+    <div id="page-checkout" class="page">
+      <div class="section" style="position: sticky; top: 0; background: #fff; z-index: 10; padding: 15px; border-bottom: 1px solid #eee;">
+        <span style="font-size: 16px; font-weight: 500;">确认订单</span>
+      </div>
+      
+      <!-- 收货地址 -->
+      <div class="section" style="background: #fff; margin: 15px; border-radius: 8px; padding: 15px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+          <span style="font-size: 14px; font-weight: 500;">收货地址</span>
+          <button onclick="console.log('按钮被点击'); showAddAddressFromCheckout();" style="background: #e74c3c; color: #fff; border: none; padding: 5px 12px; border-radius: 15px; cursor: pointer; font-size: 12px; display: flex; align-items: center; gap: 3px;">
+            <span style="font-size: 14px;">+</span>
+            <span>新增地址</span>
+          </button>
+        </div>
+        <div id="checkoutAddressSection" onclick="selectAddress()" style="padding: 12px; background: #f9f9f9; border-radius: 8px; cursor: pointer; display: none;">
+          <div id="checkoutAddressName" style="font-size: 15px; font-weight: 500; margin-bottom: 5px;">请选择收货地址</div>
+          <div id="checkoutAddressDetail" style="font-size: 13px; color: #666;">暂无地址信息</div>
+        </div>
+        <div id="checkoutNoAddress" style="padding: 20px; text-align: center; color: #999; font-size: 13px; display: none;" onclick="showAddAddressFromCheckout()">
+          <div style="margin-bottom: 10px;">📍</div>
+          <div>暂无收货地址</div>
+          <div style="color: #e74c3c; margin-top: 5px;">点击新增</div>
+        </div>
+      </div>
+      
+      <!-- 商品列表 -->
+      <div class="section" style="background: #fff; margin: 15px; border-radius: 8px; padding: 15px;">
+        <div style="font-size: 14px; font-weight: 500; margin-bottom: 10px;">商品信息</div>
+        <div id="checkoutProductList"></div>
+      </div>
+      
+      <!-- 备注 -->
+      <div class="section" style="background: #fff; margin: 15px; border-radius: 8px; padding: 15px;">
+        <textarea id="checkoutRemark" placeholder="选填：订单备注（如配送时间等）" style="width: 100%; border: 1px solid #ddd; border-radius: 8px; padding: 10px; font-size: 14px; resize: none; height: 80px;"></textarea>
+      </div>
+      
+      <!-- 金额明细 -->
+      <div class="section" style="background: #fff; margin: 15px; border-radius: 8px; padding: 15px;">
+        <div style="display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 14px;">
+          <span style="color: #666;">商品总额</span>
+          <span>¥<span id="checkoutGoodsTotal">0.00</span></span>
+        </div>
+        <div style="display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 14px;">
+          <span style="color: #666;">运费</span>
+          <span style="color: #27ae60;">免运费</span>
+        </div>
+        <div style="border-top: 1px solid #eee; padding-top: 10px; margin-top: 10px; display: flex; justify-content: space-between; align-items: center;">
+          <span style="font-size: 15px; font-weight: 500;">实付款</span>
+          <span style="color: #e74c3c; font-size: 20px; font-weight: bold;">¥<span id="checkoutTotal">0.00</span></span>
+        </div>
+      </div>
+      
+      <!-- 提交按钮 -->
+      <div style="position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 480px; background: #fff; padding: 12px 20px; box-shadow: 0 -2px 10px rgba(0,0,0,0.1);">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <div style="color: #666; font-size: 14px;">
+            合计：<span style="color: #e74c3c; font-size: 18px; font-weight: bold;">¥<span id="checkoutFooterTotal">0.00</span></span>
+          </div>
+          <button onclick="submitOrder()" style="background: #e74c3c; color: #fff; border: none; padding: 12px 35px; border-radius: 25px; cursor: pointer; font-size: 15px; font-weight: 500;">
+            提交订单
+          </button>
+        </div>
+      </div>
+    </div>
+    
+    <!-- 购物车页 -->
+    <div id="page-cart" class="page">
+      <div class="section" style="position: sticky; top: 0; background: #fff; z-index: 10; padding: 15px; border-bottom: 1px solid #eee;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <span style="font-size: 16px; font-weight: 500;">购物车</span>
+          <button onclick="clearCart()" style="background: none; border: none; color: #999; cursor: pointer; font-size: 13px;">清空</button>
+        </div>
+      </div>
+      <div id="cartList"></div>
+      <div id="cartFooter" style="position: fixed; bottom: 50px; left: 50%; transform: translateX(-50%); width: 100%; max-width: 480px; background: #fff; padding: 12px 20px; box-shadow: 0 -2px 10px rgba(0,0,0,0.1); display: none;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <div style="display: flex; align-items: center; gap: 15px;">
+            <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;">
+              <input type="checkbox" id="selectAll" onchange="toggleSelectAll()" checked>
+              <span style="font-size: 13px;">全选</span>
+            </label>
+            <div style="color: #e74c3c; font-size: 14px;">
+              合计：<span style="font-size: 18px; font-weight: bold;">¥<span id="cartTotal">0.00</span></span>
+            </div>
+          </div>
+          <button onclick="checkout()" style="background: #e74c3c; color: #fff; border: none; padding: 10px 25px; border-radius: 20px; cursor: pointer; font-size: 14px; font-weight: 500;">
+            结算 (<span id="selectedCount">0</span>)
+          </button>
+        </div>
+      </div>
+    </div>
+    
+    <!-- 登录注册弹窗 -->
+    <div id="authModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 200;" onclick="closeAuthModal(event)">
+      <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #fff; border-radius: 16px; width: 90%; max-width: 400px; padding: 30px;" onclick="event.stopPropagation()">
+        <div style="text-align: center; margin-bottom: 25px;">
+          <div style="font-size: 24px; margin-bottom: 10px;">🔐</div>
+          <div style="font-size: 18px; font-weight: 500;">用户登录/注册</div>
+        </div>
+        
+        <!-- 微信一键登录 -->
+        <div style="margin-bottom: 20px;">
+          <button onclick="wechatLogin()" style="width: 100%; padding: 14px; background: #07c160; color: #fff; border: none; border-radius: 8px; font-size: 15px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px;">
+            <span style="font-size: 20px;">💬</span>
+            <span>微信一键登录/注册</span>
+          </button>
+          <div style="text-align: center; margin-top: 8px; font-size: 12px; color: #999;">无需注册，微信授权即可登录</div>
+        </div>
+        
+        <div style="text-align: center; color: #999; font-size: 13px; margin: 20px 0;">
+          <div style="display: inline-block; padding: 0 15px; background: #fff;">— 或使用手机号登录 —</div>
+        </div>
+        
+        <!-- 手机号登录 -->
+        <div style="margin-bottom: 15px;">
+          <input type="tel" id="loginPhone" placeholder="请输入手机号" maxlength="11" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; margin-bottom: 10px;">
+          <input type="text" id="loginCode" placeholder="验证码" maxlength="6" style="width: calc(100% - 120px); padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; display: inline-block;">
+          <button onclick="sendCode()" id="sendCodeBtn" style="width: 100px; margin-left: 10px; padding: 12px; background: #e74c3c; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-size: 13px; display: inline-block;">获取验证码</button>
+        </div>
+        
+        <button onclick="phoneLogin()" style="width: 100%; padding: 14px; background: #e74c3c; color: #fff; border: none; border-radius: 8px; font-size: 15px; cursor: pointer; margin-bottom: 15px;">
+          登录/注册
+        </button>
+        
+        <div style="text-align: center; font-size: 12px; color: #999;">
+          登录即表示同意 <a href="#" style="color: #e74c3c;">用户协议</a> 和 <a href="#" style="color: #e74c3c;">隐私政策</a>
+        </div>
+      </div>
+    </div>
+    
+    <!-- 商品详情弹窗 -->
+    <div id="productModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 300;" onclick="closeProductModal(event)">
+      <div style="position: absolute; bottom: 0; left: 0; right: 0; background: #fff; border-radius: 16px 16px 0 0; max-height: 90vh; overflow-y: auto;" onclick="event.stopPropagation()">
+        <div id="productModalContent"></div>
+      </div>
+    </div>
+    
+    <!-- 购物车弹窗 -->
+    <div id="cartModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 300;" onclick="closeCartModal(event)">
+      <div style="position: absolute; bottom: 0; left: 0; right: 0; background: #fff; border-radius: 16px 16px 0 0; max-height: 80vh; overflow-y: auto;" onclick="event.stopPropagation()">
+        <div style="padding: 20px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center;">
+          <span style="font-size: 16px; font-weight: 500;">购物车</span>
+          <button onclick="clearCartFromModal()" style="background: none; border: none; color: #999; cursor: pointer; font-size: 13px;">清空</button>
+        </div>
+        <div id="cartModalList"></div>
+        <div style="padding: 15px; border-top: 1px solid #eee; display: flex; justify-content: space-between; align-items: center;">
+          <div style="color: #e74c3c; font-size: 16px; font-weight: bold;">
+            合计：¥<span id="cartModalTotal">0.00</span>
+          </div>
+          <button onclick="checkoutFromModal()" style="background: #e74c3c; color: #fff; border: none; padding: 10px 25px; border-radius: 20px; cursor: pointer; font-size: 14px;">
+            去结算
+          </button>
+        </div>
+      </div>
+    </div>
+    
+    <!-- 我的页 -->
+    <div id="page-profile" class="page">
+      <div class="user-header" id="userHeader">
+        <div class="user-info">
+          <div class="avatar" id="userAvatar">👤</div>
+          <div>
+            <div class="nickname" id="userNickname">点击登录</div>
+            <div style="font-size: 12px; opacity: 0.8; margin-top: 5px;" id="userIdInfo">微信小程序测试版</div>
+          </div>
+        </div>
+        <button class="login-btn" id="loginBtn" style="margin-top: 15px;" onclick="handleLogin()">微信登录</button>
+      </div>
+      
+      <!-- 地址管理弹窗 -->
+      <div id="addressModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 100;" onclick="closeAddressModal(event)">
+        <div style="position: absolute; bottom: 0; left: 0; right: 0; background: #fff; border-radius: 16px 16px 0 0; max-height: 80vh; overflow-y: auto;" onclick="event.stopPropagation()">
+          <div style="padding: 20px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-size: 16px; font-weight: 500;">收货地址</span>
+            <button onclick="showAddAddress()" style="background: #e74c3c; color: #fff; border: none; padding: 6px 16px; border-radius: 20px; cursor: pointer; font-size: 13px;">+ 新增</button>
+          </div>
+          <div id="addressList"></div>
+          <div style="padding: 15px; text-align: center; border-top: 1px solid #eee;" onclick="closeAddressModal()">
+            <span style="color: #999; cursor: pointer;">关闭</span>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 新增/编辑地址表单 -->
+      <div id="addressForm" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 101;" onclick="closeAddressForm(event)">
+        <div style="position: absolute; bottom: 0; left: 0; right: 0; background: #fff; border-radius: 16px 16px 0 0; padding: 20px;" onclick="event.stopPropagation()">
+          <div style="font-size: 16px; font-weight: 500; margin-bottom: 20px;" id="formTitle">新增地址</div>
+          <input type="hidden" id="editAddressId">
+          <div style="margin-bottom: 15px;">
+            <input type="text" id="addrName" placeholder="收货人姓名" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px;">
+          </div>
+          <div style="margin-bottom: 15px;">
+            <input type="tel" id="addrPhone" placeholder="手机号" maxlength="11" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px;">
+          </div>
+          <div style="margin-bottom: 15px;">
+            <input type="text" id="addrRegion" placeholder="省/市/区（示例：北京市/北京市/朝阳区）" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px;">
+          </div>
+          <div style="margin-bottom: 15px;">
+            <input type="text" id="addrDetail" placeholder="详细地址（街道、门牌号等）" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px;">
+          </div>
+          <div style="margin-bottom: 20px; display: flex; align-items: center;">
+            <input type="checkbox" id="addrDefault" style="margin-right: 8px;">
+            <label for="addrDefault" style="font-size: 14px; color: #666;">设为默认地址</label>
+          </div>
+          <div style="display: flex; gap: 10px;">
+            <button onclick="closeAddressForm()" style="flex: 1; padding: 12px; border: 1px solid #ddd; background: #fff; border-radius: 8px; cursor: pointer; font-size: 14px;">取消</button>
+            <button onclick="saveAddress()" style="flex: 1; padding: 12px; border: none; background: #e74c3c; color: #fff; border-radius: 8px; cursor: pointer; font-size: 14px;">保存</button>
+          </div>
+        </div>
+      </div>
+      
+      <div class="menu-list">
+        <div class="menu-item" onclick="switchTab('order')">
+          <span>📦 我的订单</span>
+          <span>›</span>
+        </div>
+        <div class="menu-item" onclick="openAddressModal()">
+          <span>📍 收货地址</span>
+          <span>›</span>
+        </div>
+      </div>
+      
+      <div class="menu-list">
+        <div class="menu-item" onclick="showToast('客服电话：400-888-8888')">
+          <span>📞 联系客服</span>
+          <span>›</span>
+        </div>
+        <div class="menu-item" onclick="showAbout()">
+          <span>ℹ️ 关于我们</span>
+          <span>›</span>
+        </div>
+      </div>
+    </div>
+    
+    <!-- 底部导航 -->
+    <div class="tab-bar">
+      <div class="tab-item active" onclick="switchTab('home')" data-tab="home">
+        <span class="tab-icon">🏠</span>
+        <span class="tab-label">首页</span>
+      </div>
+      <div class="tab-item" onclick="switchTab('shop')" data-tab="shop">
+        <span class="tab-icon">🛒</span>
+        <span class="tab-label">商城</span>
+      </div>
+      <div class="tab-item" onclick="showCartModal()" data-tab="cart">
+        <span class="tab-icon">🛍️</span>
+        <span class="tab-label">购物车</span>
+        <span id="cartBadge" style="position: absolute; top: 5px; right: 50%; transform: translateX(25px); background: #e74c3c; color: #fff; font-size: 10px; padding: 2px 6px; border-radius: 10px; display: none;">0</span>
+      </div>
+      <div class="tab-item" onclick="switchTab('order')" data-tab="order">
+        <span class="tab-icon">📦</span>
+        <span class="tab-label">订单</span>
+      </div>
+      <div class="tab-item" onclick="switchTab('profile')" data-tab="profile">
+        <span class="tab-icon">👤</span>
+        <span class="tab-label">我的</span>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Toast 提示 -->
+  <div id="toast" class="toast"></div>
+
+  <script>
+    const API_BASE = 'http://10.0.96.252:3000/api';
+    let currentCategory = '';
+    let allProducts = [];
+    
+    // Toast 提示
+    function showToast(message, duration = 2000) {
+      const toast = document.getElementById('toast');
+      toast.textContent = message;
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), duration);
+    }
+    
+    // 切换页面
+    function switchTab(tabName) {
+      // 切换页面显示
+      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+      document.getElementById('page-' + tabName).classList.add('active');
+      
+      // 切换底部导航
+      document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
+      document.querySelector(`.tab-item[data-tab="${tabName}"]`)?.classList.add('active');
+      
+      // 加载对应数据
+      if (tabName === 'shop') {
+        loadShopProducts();
+      } else if (tabName === 'order') {
+        loadOrders();
+      } else if (tabName === 'cart') {
+        showCartModal();
+      }
+    }
+    
+    // API 测试
+    async function testAPI(name, url) {
+      try {
+        const start = Date.now();
+        const res = await fetch(url);
+        const data = await res.json();
+        const time = Date.now() - start;
+        
+        if (data.code === 200) {
+          return { status: 'ok', name, time, data: data.data };
+        } else {
+          return { status: 'error', name, time, message: data.message };
+        }
+      } catch (error) {
+        return { status: 'error', name, message: error.message };
+      }
+    }
+    
+    // 运行所有测试
+    async function runTests() {
+      const results = [];
+      results.push(await testAPI('分类列表', API_BASE + '/categories'));
+      results.push(await testAPI('商品列表', API_BASE + '/products?limit=5'));
+      results.push(await testAPI('热销商品', API_BASE + '/products?isHot=1&limit=5'));
+      results.push(await testAPI('搜索羊肉', API_BASE + '/products?keyword=羊肉'));
+      
+      const container = document.getElementById('testResults');
+      container.innerHTML = results.map(r => `
+        <div class="test-item">
+          <span class="${r.status === 'ok' ? 'status-ok' : 'status-error'}">
+            ${r.status === 'ok' ? '✓' : '✗'} ${r.name}
+          </span>
+          <span class="test-time">${r.time || '--'}ms ${r.data ? '(' + (r.data.total || r.data.list?.length || 0) + ')' : ''}</span>
+        </div>
+      `).join('');
+      
+      // 加载数据
+      const catResult = results.find(r => r.name === '分类列表');
+      if (catResult && catResult.data) {
+        renderCategories(catResult.data);
+      }
+      
+      const hotResult = results.find(r => r.name === '热销商品');
+      if (hotResult && hotResult.data) {
+        renderProducts(hotResult.data.list || [], 'productList');
+      }
+      
+      allProducts = (results.find(r => r.name === '商品列表')?.data?.list) || [];
+    }
+    
+    // 渲染分类
+    function renderCategories(categories) {
+      const grid = document.getElementById('categoryGrid');
+      const shopGrid = document.getElementById('shopCategoryGrid');
+      
+      const html = [
+        { id: '', name: '全部', icon: '🏪' },
+        ...categories.map(c => ({ id: c.id, name: c.name, icon: '🍖' }))
+      ].map(c => `
+        <div class="category-item ${currentCategory === c.id ? 'active' : ''}" 
+             onclick="selectCategory('${c.id}')">
+          <div class="category-icon">${c.icon}</div>
+          <div class="category-name">${c.name}</div>
+        </div>
+      `).join('');
+      
+      grid.innerHTML = html;
+      shopGrid.innerHTML = html;
+    }
+    
+    // 选择分类
+    async function selectCategory(catId) {
+      currentCategory = catId;
+      document.querySelectorAll('.category-item').forEach((el, idx) => {
+        el.classList.toggle('active', 
+          (idx === 0 && catId === '') || 
+          (idx > 0 && catId == el.querySelector('.category-name').textContent)
+        );
+      });
+      
+      await loadShopProducts();
+    }
+    
+    // 渲染商品
+    function renderProducts(products, containerId = 'productList') {
+      const container = document.getElementById(containerId);
+      
+      if (!products || products.length === 0) {
+        container.innerHTML = '<div class="empty">暂无商品</div>';
+        return;
+      }
+      
+      container.innerHTML = products.map(p => `
+        <div class="product-item" onclick="viewProduct(${p.id})">
+          <div class="product-image">🍖</div>
+          <div class="product-info">
+            <div>
+              <div class="product-name">${p.name}</div>
+              <div class="product-desc">${p.description || ''}</div>
+            </div>
+            <div class="product-bottom">
+              <div>
+                <span class="product-price">¥${(p.price / 100).toFixed(2)}</span>
+                ${p.original_price ? `<span class="original-price">¥${(p.original_price / 100).toFixed(2)}</span>` : ''}
+              </div>
+              <div class="product-sales">销量 ${p.sales || 0}</div>
+            </div>
+          </div>
+          <button class="add-cart-btn" onclick="event.stopPropagation(); addToCart(${p.id}, '${p.name}', ${p.price})">+</button>
+        </div>
+      `).join('');
+    }
+    
+    // 加载商城商品
+    async function loadShopProducts() {
+      const container = document.getElementById('shopProductList');
+      container.innerHTML = '<div class="loading">加载中...</div>';
+      
+      try {
+        let url = API_BASE + '/products?limit=50';
+        if (currentCategory) {
+          url += '&categoryId=' + currentCategory;
+        }
+        
+        const res = await fetch(url);
+        const data = await res.json();
+        
+        if (data.code === 200) {
+          renderProducts(data.data.list || [], 'shopProductList');
+        } else {
+          container.innerHTML = '<div class="empty">加载失败</div>';
+        }
+      } catch (error) {
+        container.innerHTML = '<div class="empty">加载失败：' + error.message + '</div>';
+      }
+    }
+    
+    // 搜索
+    async function handleSearch() {
+      const keyword = document.getElementById('searchInput').value.trim();
+      if (!keyword) {
+        showToast('请输入搜索关键词');
+        return;
+      }
+      
+      switchTab('shop');
+      document.getElementById('shopSearchInput').value = keyword;
+      await loadShopProductsByKeyword(keyword);
+    }
+    
+    async function handleShopSearch() {
+      const keyword = document.getElementById('shopSearchInput').value.trim();
+      if (!keyword) {
+        showToast('请输入搜索关键词');
+        return;
+      }
+      await loadShopProductsByKeyword(keyword);
+    }
+    
+    async function loadShopProductsByKeyword(keyword) {
+      const container = document.getElementById('shopProductList');
+      container.innerHTML = '<div class="loading">搜索中...</div>';
+      
+      try {
+        const res = await fetch(API_BASE + '/products?keyword=' + encodeURIComponent(keyword));
+        const data = await res.json();
+        
+        if (data.code === 200) {
+          renderProducts(data.data.list || [], 'shopProductList');
+          showToast(`找到 ${data.data.total || 0} 个商品`);
+        }
+      } catch (error) {
+        container.innerHTML = '<div class="empty">搜索失败</div>';
+      }
+    }
+    
+    // 加载订单
+    async function loadOrders() {
+      const container = document.getElementById('orderList');
+      container.innerHTML = '<div class="loading">加载中...</div>';
+      
+      try {
+        // 模拟订单数据（因为需要登录）
+        const mockOrders = [
+          { id: 1, orderNo: 'ORD20260228001', status: 0, total: 59.8, items: [{name: '羊肉串', qty: 2, price: 5.99}] },
+          { id: 2, orderNo: 'ORD20260227002', status: 2, total: 128.5, items: [{name: '烤鱿鱼', qty: 3, price: 24.99}] }
+        ];
+        
+        renderOrders(mockOrders);
+      } catch (error) {
+        container.innerHTML = '<div class="empty">暂无订单</div>';
+      }
+    }
+    
+    function renderOrders(orders) {
+      const container = document.getElementById('orderList');
+      const statusMap = { 0: '待付款', 1: '待发货', 2: '待收货', 3: '已完成' };
+      
+      if (!orders || orders.length === 0) {
+        container.innerHTML = '<div class="empty">暂无订单</div>';
+        return;
+      }
+      
+      container.innerHTML = orders.map(o => `
+        <div class="order-item">
+          <div class="order-header">
+            <span>${o.orderNo}</span>
+            <span class="order-status">${statusMap[o.status]}</span>
+          </div>
+          <div class="order-goods">
+            ${o.items.map(i => `
+              <div class="product-image">🍖</div>
+              <div style="flex:1">
+                <div style="font-size:13px">${i.name}</div>
+                <div style="font-size:12px;color:#999">x${i.qty}</div>
+              </div>
+            `).join('')}
+          </div>
+          <div class="order-total">合计：¥${o.total.toFixed(2)}</div>
+          <div class="order-actions">
+            ${o.status === 0 ? `
+              <button class="order-btn" onclick="cancelOrder(${o.id})">取消订单</button>
+              <button class="order-btn primary" onclick="payOrder(${o.id})">立即付款</button>
+            ` : ''}
+            ${o.status === 2 ? `
+              <button class="order-btn primary" onclick="confirmReceipt(${o.id})">确认收货</button>
+            ` : ''}
+          </div>
+        </div>
+      `).join('');
+    }
+    
+    function filterOrder(status) {
+      document.querySelectorAll('.order-btn').forEach(b => b.classList.remove('active'));
+      event.target.classList.add('active');
+      showToast('筛选：' + event.target.textContent);
+    }
+    
+    // ========== 地址管理功能 ==========
+    
+    // 模拟地址数据
+    let addresses = [
+      { id: 1, name: '张三', phone: '13800138000', province: '北京市', city: '北京市', district: '朝阳区', detail: '望京 SOHO T1 栋 1001 室', is_default: 1 },
+      { id: 2, name: '李四', phone: '13900139000', province: '上海市', city: '上海市', district: '浦东新区', detail: '陆家嘴金融中心 88 楼', is_default: 0 }
+    ];
+    
+    // 打开地址弹窗
+    function openAddressModal() {
+      document.getElementById('addressModal').style.display = 'block';
+      renderAddresses();
+    }
+    
+    // 关闭地址弹窗
+    function closeAddressModal(e) {
+      if (!e || e.target === document.getElementById('addressModal')) {
+        document.getElementById('addressModal').style.display = 'none';
+      }
+    }
+    
+    // 渲染地址列表
+    function renderAddresses() {
+      const container = document.getElementById('addressList');
+      
+      if (!addresses || addresses.length === 0) {
+        container.innerHTML = '<div class="empty" style="padding: 40px 20px; color: #999;">暂无地址，点击右上角添加</div>';
+        return;
+      }
+      
+      container.innerHTML = addresses.map(addr => `
+        <div style="padding: 20px; border-bottom: 1px solid #f5f5f5; position: relative;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <div>
+              <span style="font-size: 15px; font-weight: 500;">${addr.name}</span>
+              <span style="margin-left: 10px; color: #666;">${addr.phone}</span>
+            </div>
+            ${addr.is_default ? '<span style="background: #e74c3c; color: #fff; font-size: 11px; padding: 2px 8px; border-radius: 4px;">默认</span>' : ''}
+          </div>
+          <div style="font-size: 14px; color: #666; margin-bottom: 10px;">${addr.province}${addr.city}${addr.district}${addr.detail}</div>
+          <div style="display: flex; gap: 10px;">
+            <button onclick="editAddress(${addr.id})" style="padding: 5px 15px; border: 1px solid #e74c3c; background: #fff; color: #e74c3c; border-radius: 4px; cursor: pointer; font-size: 12px;">编辑</button>
+            <button onclick="deleteAddress(${addr.id})" style="padding: 5px 15px; border: 1px solid #999; background: #fff; color: #666; border-radius: 4px; cursor: pointer; font-size: 12px;">删除</button>
+            ${!addr.is_default ? `<button onclick="setDefaultAddress(${addr.id})" style="padding: 5px 15px; border: 1px solid #27ae60; background: #fff; color: #27ae60; border-radius: 4px; cursor: pointer; font-size: 12px;">设为默认</button>` : ''}
+          </div>
+        </div>
+      `).join('');
+    }
+    
+    // 显示新增地址表单
+    function showAddAddress() {
+      console.log('showAddAddress 开始执行');
+      try {
+        const formTitle = document.getElementById('formTitle');
+        const addressForm = document.getElementById('addressForm');
+        const addressModal = document.getElementById('addressModal');
+        
+        console.log('formTitle:', formTitle);
+        console.log('addressForm:', addressForm);
+        console.log('addressModal:', addressModal);
+        
+        if (formTitle) formTitle.textContent = '新增地址';
+        document.getElementById('editAddressId').value = '';
+        document.getElementById('addrName').value = '';
+        document.getElementById('addrPhone').value = '';
+        document.getElementById('addrRegion').value = '';
+        document.getElementById('addrDetail').value = '';
+        document.getElementById('addrDefault').checked = false;
+        
+        if (addressModal) {
+          addressModal.style.display = 'none';
+          console.log('已关闭 addressModal');
+        }
+        
+        if (addressForm) {
+          addressForm.style.display = 'block';
+          console.log('已打开 addressForm');
+        } else {
+          console.error('找不到 addressForm 元素');
+          alert('错误：找不到地址表单');
+        }
+      } catch(e) {
+        console.error('showAddAddress 错误:', e);
+        alert('showAddAddress 错误：' + e.message);
+      }
+    }
+    
+    // 从结算页新增地址
+    function showAddAddressFromCheckout() {
+      console.log('showAddAddressFromCheckout 被调用');
+      try {
+        showAddAddress();
+        window.checkoutMode = true;
+        console.log('成功打开地址表单');
+      } catch(e) {
+        console.error('showAddAddressFromCheckout 错误:', e);
+        alert('打开地址表单失败：' + e.message);
+      }
+    }
+    
+    // 编辑地址
+    function editAddress(id) {
+      const addr = addresses.find(a => a.id === id);
+      if (!addr) return;
+      
+      document.getElementById('formTitle').textContent = '编辑地址';
+      document.getElementById('editAddressId').value = id;
+      document.getElementById('addrName').value = addr.name;
+      document.getElementById('addrPhone').value = addr.phone;
+      document.getElementById('addrRegion').value = `${addr.province}/${addr.city}/${addr.district}`;
+      document.getElementById('addrDetail').value = addr.detail;
+      document.getElementById('addrDefault').checked = addr.is_default;
+      document.getElementById('addressModal').style.display = 'none';
+      document.getElementById('addressForm').style.display = 'block';
+    }
+    
+    // 关闭表单
+    function closeAddressForm(e) {
+      if (!e || e.target === document.getElementById('addressForm')) {
+        document.getElementById('addressForm').style.display = 'none';
+      }
+    }
+    
+    // 保存地址
+    function saveAddress() {
+      const id = document.getElementById('editAddressId').value;
+      const name = document.getElementById('addrName').value.trim();
+      const phone = document.getElementById('addrPhone').value.trim();
+      const region = document.getElementById('addrRegion').value.trim();
+      const detail = document.getElementById('addrDetail').value.trim();
+      const isDefault = document.getElementById('addrDefault').checked;
+      
+      if (!name || !phone || !region || !detail) {
+        showToast('请填写完整信息');
+        return;
+      }
+      
+      const [province, city, district] = region.split('/');
+      if (!province || !city || !district) {
+        showToast('地区格式：省/市/区');
+        return;
+      }
+      
+      if (!/^1[3-9]\d{9}$/.test(phone)) {
+        showToast('手机号格式不正确');
+        return;
+      }
+      
+      if (id) {
+        // 编辑
+        const index = addresses.findIndex(a => a.id == id);
+        if (index !== -1) {
+          addresses[index] = { ...addresses[index], name, phone, province, city, district, detail, is_default: isDefault ? 1 : 0 };
+        }
+        showToast('编辑成功');
+      } else {
+        // 新增
+        const newId = Math.max(...addresses.map(a => a.id), 0) + 1;
+        const newAddress = { id: newId, name, phone, province, city, district, detail, is_default: isDefault ? 1 : 0 };
+        addresses.push(newAddress);
+        showToast('添加成功');
+        
+        // 如果是从结算页新增，自动选择该地址
+        if (window.checkoutMode) {
+          selectedAddress = newAddress;
+          updateCheckoutAddressDisplay();
+          window.checkoutMode = false;
+        }
+      }
+      
+      document.getElementById('addressForm').style.display = 'none';
+      if (window.checkoutMode) {
+        // 从结算页新增，直接返回结算页
+        document.getElementById('addressModal').style.display = 'none';
+      } else {
+        document.getElementById('addressModal').style.display = 'block';
+        renderAddresses();
+      }
+    }
+    
+    // 删除地址
+    function deleteAddress(id) {
+      if (!confirm('确定删除该地址吗？')) return;
+      addresses = addresses.filter(a => a.id !== id);
+      renderAddresses();
+      showToast('删除成功');
+    }
+    
+    // 设为默认地址
+    function setDefaultAddress(id) {
+      addresses.forEach(a => {
+        a.is_default = (a.id === id) ? 1 : 0;
+      });
+      renderAddresses();
+      showToast('已设为默认地址');
+    }
+    
+    // 登录功能
+    let isLoggedIn = false;
+    let currentUser = null;
+    
+    // 打开登录弹窗
+    function handleLogin() {
+      document.getElementById('authModal').style.display = 'block';
+    }
+    
+    // 关闭登录弹窗
+    function closeAuthModal(e) {
+      if (!e || e.target === document.getElementById('authModal')) {
+        document.getElementById('authModal').style.display = 'none';
+      }
+    }
+    
+    // 微信一键登录
+    function wechatLogin() {
+      // 模拟微信登录
+      const loading = showToast('正在授权登录...');
+      
+      setTimeout(() => {
+        isLoggedIn = true;
+        currentUser = {
+          id: 10001,
+          nickname: '微信用户_' + Math.floor(Math.random() * 10000),
+          avatar: '',
+          phone: '',
+          loginType: 'wechat'
+        };
+        
+        updateUserDisplay();
+        document.getElementById('authModal').style.display = 'none';
+        showToast('登录成功！');
+        
+        // 保存到 localStorage
+        localStorage.setItem('user', JSON.stringify(currentUser));
+      }, 1500);
+    }
+    
+    // 发送验证码
+    function sendCode() {
+      const phone = document.getElementById('loginPhone').value.trim();
+      
+      if (!phone) {
+        showToast('请输入手机号');
+        return;
+      }
+      
+      if (!/^1[3-9]\d{9}$/.test(phone)) {
+        showToast('手机号格式不正确');
+        return;
+      }
+      
+      // 模拟发送验证码
+      const btn = document.getElementById('sendCodeBtn');
+      btn.disabled = true;
+      btn.style.background = '#ccc';
+      
+      let count = 60;
+      btn.textContent = count + 's';
+      
+      const timer = setInterval(() => {
+        count--;
+        btn.textContent = count + 's';
+        
+        if (count <= 0) {
+          clearInterval(timer);
+          btn.disabled = false;
+          btn.style.background = '#e74c3c';
+          btn.textContent = '获取验证码';
+        }
+      }, 1000);
+      
+      showToast('验证码已发送：123456');
+    }
+    
+    // 手机号登录
+    function phoneLogin() {
+      const phone = document.getElementById('loginPhone').value.trim();
+      const code = document.getElementById('loginCode').value.trim();
+      
+      if (!phone) {
+        showToast('请输入手机号');
+        return;
+      }
+      
+      if (!code) {
+        showToast('请输入验证码');
+        return;
+      }
+      
+      if (code !== '123456') {
+        showToast('验证码错误');
+        return;
+      }
+      
+      // 模拟登录
+      isLoggedIn = true;
+      currentUser = {
+        id: 10002,
+        nickname: '手机用户_' + phone.substr(7, 4),
+        avatar: '',
+        phone: phone,
+        loginType: 'phone'
+      };
+      
+      updateUserDisplay();
+      document.getElementById('authModal').style.display = 'none';
+      showToast('登录成功！');
+      
+      localStorage.setItem('user', JSON.stringify(currentUser));
+    }
+    
+    // 更新用户显示
+    function updateUserDisplay() {
+      if (!currentUser) return;
+      
+      document.getElementById('userNickname').textContent = currentUser.nickname;
+      document.getElementById('userIdInfo').textContent = currentUser.phone || '微信用户';
+      document.getElementById('loginBtn').textContent = '退出登录';
+      document.getElementById('loginBtn').onclick = logout;
+      document.getElementById('loginBtn').style.background = 'rgba(255,255,255,0.3)';
+      
+      // 地址功能变为可用
+      addresses = currentUser.addresses || [
+        { id: 1, name: '测试用户', phone: '13800138000', province: '北京市', city: '北京市', district: '朝阳区', detail: '测试地址 1 号', is_default: 1 }
+      ];
+      
+      // 加载购物车
+      loadCart();
+    }
+    
+    // ========== 购物车功能 ==========
+    
+    // 购物车数据
+    let cart = [];
+    
+    // 添加到购物车
+    function addToCart(productId, productName, productPrice, e) {
+      if (!isLoggedIn) {
+        handleLogin();
+        return;
+      }
+      
+      const existingItem = cart.find(item => item.id === productId);
+      
+      if (existingItem) {
+        existingItem.quantity++;
+        showToast('数量 +1');
+      } else {
+        cart.push({
+          id: productId,
+          name: productName,
+          price: productPrice,
+          quantity: 1,
+          selected: true
+        });
+        showToast('已加入购物车');
+      }
+      
+      updateCartCount();
+      saveCart();
+      
+      if (e) {
+        e.stopPropagation();
+      }
+    }
+    
+    // 更新购物车数量显示
+    function updateCartCount() {
+      const count = cart.reduce((sum, item) => sum + item.quantity, 0);
+      const badge = document.getElementById('cartBadge');
+      
+      if (count > 0) {
+        badge.textContent = count > 99 ? '99+' : count;
+        badge.style.display = 'block';
+      } else {
+        badge.style.display = 'none';
+      }
+    }
+    
+    // 保存购物车到 localStorage
+    function saveCart() {
+      if (currentUser) {
+        localStorage.setItem('cart_' + currentUser.id, JSON.stringify(cart));
+      }
+    }
+    
+    // 加载购物车
+    function loadCart() {
+      if (currentUser) {
+        const savedCart = localStorage.getItem('cart_' + currentUser.id);
+        if (savedCart) {
+          cart = JSON.parse(savedCart);
+          updateCartCount();
+        }
+      }
+    }
+    
+    // 显示购物车弹窗
+    function showCartModal() {
+      if (!isLoggedIn) {
+        handleLogin();
+        return;
+      }
+      
+      renderCartModal();
+      document.getElementById('cartModal').style.display = 'block';
+    }
+    
+    // 关闭购物车弹窗
+    function closeCartModal(e) {
+      if (!e || e.target === document.getElementById('cartModal')) {
+        document.getElementById('cartModal').style.display = 'none';
+      }
+    }
+    
+    // 渲染购物车
+    function renderCartModal() {
+      const container = document.getElementById('cartModalList');
+      
+      if (!cart || cart.length === 0) {
+        container.innerHTML = '<div class="empty" style="padding: 40px 20px; color: #999;">购物车空空如也~</div>';
+        document.getElementById('cartModalTotal').textContent = '0.00';
+        return;
+      }
+      
+      let total = 0;
+      container.innerHTML = cart.map(item => {
+        total += (item.price / 100) * item.quantity;
+        return `
+          <div style="padding: 15px 20px; display: flex; gap: 15px; border-bottom: 1px solid #f5f5f5;">
+            <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #667eea, #764ba2); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 32px; flex-shrink: 0;">🍖</div>
+            <div style="flex: 1; display: flex; flex-direction: column; justify-content: space-between;">
+              <div style="font-size: 14px; font-weight: 500;">${item.name}</div>
+              <div style="color: #e74c3c; font-size: 16px; font-weight: bold;">¥${(item.price / 100).toFixed(2)}</div>
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div style="display: flex; align-items: center; border: 1px solid #ddd; border-radius: 4px;">
+                  <button onclick="decreaseQuantity(${item.id})" style="width: 28px; height: 28px; background: #f5f5f5; border: none; cursor: pointer; font-size: 16px;">-</button>
+                  <span style="padding: 0 10px; font-size: 14px;">${item.quantity}</span>
+                  <button onclick="increaseQuantity(${item.id})" style="width: 28px; height: 28px; background: #f5f5f5; border: none; cursor: pointer; font-size: 16px;">+</button>
+                </div>
+                <button onclick="removeFromCart(${item.id})" style="color: #999; background: none; border: none; cursor: pointer; font-size: 13px;">删除</button>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+      
+      document.getElementById('cartModalTotal').textContent = total.toFixed(2);
+    }
+    
+    // 增加数量
+    function increaseQuantity(id) {
+      const item = cart.find(i => i.id === id);
+      if (item) {
+        item.quantity++;
+        renderCartModal();
+        saveCart();
+        updateCartCount();
+      }
+    }
+    
+    // 减少数量
+    function decreaseQuantity(id) {
+      const item = cart.find(i => i.id === id);
+      if (item) {
+        if (item.quantity > 1) {
+          item.quantity--;
+        } else {
+          removeFromCart(id);
+          return;
+        }
+        renderCartModal();
+        saveCart();
+        updateCartCount();
+      }
+    }
+    
+    // 删除商品
+    function removeFromCart(id) {
+      if (!confirm('确定删除该商品吗？')) return;
+      cart = cart.filter(item => item.id !== id);
+      renderCartModal();
+      saveCart();
+      updateCartCount();
+    }
+    
+    // 清空购物车
+    function clearCart() {
+      if (!confirm('确定清空购物车吗？')) return;
+      cart = [];
+      renderCartModal();
+      saveCart();
+      updateCartCount();
+      showToast('购物车已清空');
+    }
+    
+    function clearCartFromModal() {
+      clearCart();
+    }
+    
+    // ========== 结算功能 ==========
+    
+    // 结算商品数据
+    let checkoutItems = [];
+    let selectedAddress = null;
+    
+    // 去结算（从购物车）
+    function checkoutFromModal() {
+      if (cart.length === 0) {
+        showToast('购物车是空的');
+        return;
+      }
+      
+      // 准备结算商品
+      checkoutItems = cart.map(item => ({
+        productId: item.id,
+        name: item.name,
+        price: item.price,
+        quantity: item.quantity
+      }));
+      
+      closeCartModal();
+      showCheckoutPage();
+    }
+    
+    // 显示结算页
+    function showCheckoutPage() {
+      if (!isLoggedIn) {
+        handleLogin();
+        return;
+      }
+      
+      if (checkoutItems.length === 0) {
+        showToast('没有要结算的商品');
+        return;
+      }
+      
+      // 切换到结算页
+      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+      document.getElementById('page-checkout').classList.add('active');
+      
+      // 渲染商品信息
+      renderCheckoutProducts();
+      
+      // 加载默认地址
+      loadCheckoutAddress();
+      
+      // 计算总额
+      calculateCheckoutTotal();
+    }
+    
+    // 渲染结算商品
+    function renderCheckoutProducts() {
+      const container = document.getElementById('checkoutProductList');
+      
+      container.innerHTML = checkoutItems.map(item => `
+        <div style="display: flex; gap: 15px; padding: 10px 0; border-bottom: 1px solid #f5f5f5;">
+          <div style="width: 60px; height: 60px; background: linear-gradient(135deg, #667eea, #764ba2); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 24px; flex-shrink: 0;">🍖</div>
+          <div style="flex: 1;">
+            <div style="font-size: 14px; font-weight: 500; margin-bottom: 5px;">${item.name}</div>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <div style="color: #e74c3c; font-size: 15px; font-weight: bold;">¥${(item.price / 100).toFixed(2)}</div>
+              <div style="font-size: 13px; color: #999;">x${item.quantity}</div>
+            </div>
+          </div>
+        </div>
+      `).join('');
+    }
+    
+    // 加载结算地址
+    function loadCheckoutAddress() {
+      if (addresses && addresses.length > 0) {
+        selectedAddress = addresses.find(a => a.is_default) || addresses[0];
+        updateCheckoutAddressDisplay();
+      } else {
+        // 显示无地址提示
+        document.getElementById('checkoutAddressSection').style.display = 'none';
+        document.getElementById('checkoutNoAddress').style.display = 'block';
+        return;
+      }
+      
+      // 显示有地址
+      document.getElementById('checkoutAddressSection').style.display = 'block';
+      document.getElementById('checkoutNoAddress').style.display = 'none';
+      updateCheckoutAddressDisplay();
+    }
+    
+    // 更新地址显示
+    function updateCheckoutAddressDisplay() {
+      if (!selectedAddress) {
+        document.getElementById('checkoutAddressSection').style.display = 'block';
+        document.getElementById('checkoutAddressName').textContent = '请选择收货地址';
+        document.getElementById('checkoutAddressDetail').textContent = '暂无地址信息';
+        return;
+      }
+      
+      // 显示有地址
+      document.getElementById('checkoutAddressSection').style.display = 'block';
+      document.getElementById('checkoutNoAddress').style.display = 'none';
+      document.getElementById('checkoutAddressName').textContent = `${selectedAddress.name}  ${selectedAddress.phone}`;
+      document.getElementById('checkoutAddressDetail').textContent = `${selectedAddress.province}${selectedAddress.city}${selectedAddress.district}${selectedAddress.detail}`;
+    }
+    
+    // 选择地址
+    function selectAddress() {
+      if (!addresses || addresses.length === 0) {
+        showAddAddressFromCheckout();
+        return;
+      }
+      
+      // 显示地址选择弹窗
+      const addressList = addresses.map(addr => `
+        <div onclick="confirmSelectAddress(${addr.id})" style="padding: 15px; border-bottom: 1px solid #f5f5f5; cursor: pointer;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <div style="font-size: 15px; font-weight: 500;">${addr.name}  ${addr.phone}</div>
+              <div style="font-size: 13px; color: #666; margin-top: 5px;">${addr.province}${addr.city}${addr.district}${addr.detail}</div>
+            </div>
+            ${addr.is_default ? '<span style="background: #e74c3c; color: #fff; font-size: 11px; padding: 2px 8px; border-radius: 4px;">默认</span>' : ''}
+          </div>
+        </div>
+      `).join('');
+      
+      const modal = document.createElement('div');
+      modal.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; display: flex; align-items: flex-end;';
+      modal.innerHTML = `
+        <div style="background: #fff; border-radius: 16px 16px 0 0; width: 100%; max-height: 70vh; overflow-y: auto;" onclick="event.stopPropagation()">
+          <div style="padding: 20px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-size: 16px; font-weight: 500;">选择收货地址</span>
+            <button onclick="this.parentElement.parentElement.parentElement.remove()" style="background: none; border: none; color: #999; cursor: pointer; font-size: 20px;">×</button>
+          </div>
+          <div>${addressList}</div>
+          <div style="padding: 15px; border-top: 1px solid #eee;">
+            <button onclick="showAddAddressFromCheckout(); this.parentElement.parentElement.parentElement.remove();" style="width: 100%; padding: 12px; background: #f5f5f5; color: #333; border: none; border-radius: 8px; cursor: pointer; font-size: 14px;">
+              + 新增地址
+            </button>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(modal);
+    }
+    
+    // 确认选择地址
+    function confirmSelectAddress(id) {
+      selectedAddress = addresses.find(a => a.id === id);
+      updateCheckoutAddressDisplay();
+      // 关闭弹窗
+      document.querySelectorAll('[style*="z-index: 1000"]').forEach(el => el.remove());
+      showToast(`已选择：${selectedAddress.name} 的地址`);
+    }
+    
+    // 计算结算总额
+    function calculateCheckoutTotal() {
+      const goodsTotal = checkoutItems.reduce((sum, item) => sum + (item.price / 100) * item.quantity, 0);
+      const freight = 0; // 免运费
+      const total = goodsTotal + freight;
+      
+      document.getElementById('checkoutGoodsTotal').textContent = goodsTotal.toFixed(2);
+      document.getElementById('checkoutTotal').textContent = total.toFixed(2);
+      document.getElementById('checkoutFooterTotal').textContent = total.toFixed(2);
+    }
+    
+    // 提交订单
+    async function submitOrder() {
+      if (!selectedAddress) {
+        showToast('请选择收货地址');
+        selectAddress();
+        return;
+      }
+      
+      if (checkoutItems.length === 0) {
+        showToast('没有要结算的商品');
+        return;
+      }
+      
+      const remark = document.getElementById('checkoutRemark').value.trim();
+      const total = checkoutItems.reduce((sum, item) => sum + (item.price / 100) * item.quantity, 0);
+      
+      showToast('正在提交订单...');
+      
+      // 模拟提交订单
+      setTimeout(() => {
+        // 生成订单号
+        const orderNo = 'ORD' + new Date().toISOString().replace(/[-:T.]/g, '').substring(0, 14) + Math.floor(Math.random() * 10000);
+        
+        // 创建订单
+        const newOrder = {
+          id: Date.now(),
+          orderNo: orderNo,
+          status: 0, // 待付款
+          totalAmount: total,
+          items: [...checkoutItems],
+          address: { ...selectedAddress },
+          remark: remark,
+          createdAt: new Date().toISOString()
+        };
+        
+        // 保存到订单列表
+        if (!currentUser.orders) {
+          currentUser.orders = [];
+        }
+        currentUser.orders.unshift(newOrder);
+        
+        // 清空购物车
+        cart = [];
+        saveCart();
+        updateCartCount();
+        
+        // 显示支付提示
+        wxPayOrder(newOrder);
+      }, 1000);
+    }
+    
+    // 模拟支付
+    function wxPayOrder(order) {
+      const modal = document.createElement('div');
+      modal.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; display: flex; align-items: center; justify-content: center;';
+      modal.innerHTML = `
+        <div style="background: #fff; border-radius: 16px; padding: 30px; text-align: center; max-width: 300px;">
+          <div style="font-size: 24px; margin-bottom: 15px;">💳 模拟支付</div>
+          <div style="font-size: 14px; color: #666; margin-bottom: 20px;">订单金额：¥${(order.totalAmount / 100).toFixed(2)}</div>
+          <div style="display: flex; gap: 15px; justify-content: center;">
+            <button onclick="this.parentElement.parentElement.parentElement.remove(); showToast('支付成功'); closeCheckoutPage();" style="background: #07c160; color: #fff; border: none; padding: 10px 25px; border-radius: 8px; cursor: pointer; font-size: 14px;">确认支付</button>
+            <button onclick="this.parentElement.parentElement.parentElement.remove(); showToast('取消支付'); closeCheckoutPage();" style="background: #999; color: #fff; border: none; padding: 10px 25px; border-radius: 8px; cursor: pointer; font-size: 14px;">取消</button>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(modal);
+    }
+    
+    // 关闭结算页
+    function closeCheckoutPage() {
+      checkoutItems = [];
+      document.getElementById('checkoutRemark').value = '';
+      switchTab('order');
+      loadOrders();
+    }
+    
+    // ========== 商品详情功能 ==========
+    
+    // 当前查看的商品
+    let currentProduct = null;
+    
+    // 查看商品详情
+    async function viewProduct(id) {
+      try {
+        const res = await fetch(API_BASE + '/products/' + id);
+        const data = await res.json();
+        
+        if (data.code !== 200) {
+          showToast('商品不存在');
+          return;
+        }
+        
+        currentProduct = data.data;
+        showProductModal(currentProduct);
+      } catch (error) {
+        showToast('加载商品详情失败');
+      }
+    }
+    
+    // 显示商品详情弹窗
+    function showProductModal(product) {
+      const modal = document.getElementById('productModal');
+      const content = document.getElementById('productModalContent');
+      
+      const images = product.images ? JSON.parse(product.images) : [];
+      
+      content.innerHTML = `
+        <div style="position: relative;">
+          <div style="width: 100%; height: 300px; background: linear-gradient(135deg, #667eea, #764ba2); display: flex; align-items: center; justify-content: center; color: #fff; font-size: 80px;">🍖</div>
+          <button onclick="closeProductModal()" style="position: absolute; top: 15px; right: 15px; width: 36px; height: 36px; background: rgba(0,0,0,0.5); border: none; border-radius: 50%; color: #fff; cursor: pointer; font-size: 20px; display: flex; align-items: center; justify-content: center;">×</button>
+        </div>
+        
+        <div style="padding: 20px;">
+          <div style="font-size: 18px; font-weight: 500; margin-bottom: 10px;">${product.name}</div>
+          <div style="color: #999; font-size: 14px; margin-bottom: 15px;">${product.description || '暂无描述'}</div>
+          
+          <div style="display: flex; align-items: baseline; gap: 10px; margin-bottom: 20px;">
+            <span style="color: #e74c3c; font-size: 24px; font-weight: bold;">¥${(product.price / 100).toFixed(2)}</span>
+            ${product.original_price ? `<span style="color: #999; font-size: 14px; text-decoration: line-through;">¥${(product.original_price / 100).toFixed(2)}</span>` : ''}
+          </div>
+          
+          <div style="display: flex; gap: 15px; margin-bottom: 20px; font-size: 13px; color: #999;">
+            <span>销量：${product.sales || 0}</span>
+            <span>库存：${product.stock || 0}</span>
+            <span>分类：${product.category_name || '未知'}</span>
+          </div>
+          
+          <div style="padding: 15px; background: #f9f9f9; border-radius: 8px; margin-bottom: 20px;">
+            <div style="font-size: 14px; font-weight: 500; margin-bottom: 10px;">商品详情</div>
+            <div style="font-size: 13px; color: #666; line-height: 1.6;">
+              ${product.description || '优质烧烤食材，新鲜配送，让您在家也能享受烧烤乐趣！'}
+            </div>
+          </div>
+          
+          <div style="display: flex; gap: 15px;">
+            <button onclick="addToCartFromModal()" style="flex: 1; padding: 14px; background: #f5f5f5; color: #333; border: none; border-radius: 8px; cursor: pointer; font-size: 15px; display: flex; align-items: center; justify-content: center; gap: 5px;">
+              <span style="font-size: 18px;">🛒</span>
+              <span>加入购物车</span>
+            </button>
+            <button onclick="buyNow()" style="flex: 1; padding: 14px; background: #e74c3c; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-size: 15px;">立即购买</button>
+          </div>
+        </div>
+      `;
+      
+      modal.style.display = 'block';
+    }
+    
+    // 关闭商品详情
+    function closeProductModal(e) {
+      if (!e || e.target === document.getElementById('productModal')) {
+        document.getElementById('productModal').style.display = 'none';
+      }
+    }
+    
+    // 从详情页加入购物车
+    function addToCartFromModal() {
+      if (!currentProduct) return;
+      
+      if (!isLoggedIn) {
+        closeProductModal();
+        handleLogin();
+        return;
+      }
+      
+      addToCart(currentProduct.id, currentProduct.name, currentProduct.price);
+    }
+    
+    // 立即购买
+    function buyNow() {
+      if (!currentProduct) return;
+      
+      if (!isLoggedIn) {
+        closeProductModal();
+        handleLogin();
+        return;
+      }
+      
+      // 直接购买当前商品
+      checkoutItems = [{
+        productId: currentProduct.id,
+        name: currentProduct.name,
+        price: currentProduct.price,
+        quantity: 1
+      }];
+      
+      closeProductModal();
+      showCheckoutPage();
+    }
+    
+    // 退出登录
+    function logout() {
+      if (!confirm('确定退出登录吗？')) return;
+      
+      isLoggedIn = false;
+      currentUser = null;
+      
+      document.getElementById('userNickname').textContent = '点击登录';
+      document.getElementById('userIdInfo').textContent = '微信小程序测试版';
+      document.getElementById('loginBtn').textContent = '微信登录';
+      document.getElementById('loginBtn').onclick = handleLogin;
+      document.getElementById('loginBtn').style.background = 'rgba(255,255,255,0.2)';
+      
+      localStorage.removeItem('user');
+      showToast('已退出登录');
+    }
+    
+    // 页面加载时检查登录状态
+    function checkLoginStatus() {
+      const savedUser = localStorage.getItem('user');
+      if (savedUser) {
+        try {
+          currentUser = JSON.parse(savedUser);
+          isLoggedIn = true;
+          updateUserDisplay();
+        } catch (e) {
+          console.error('解析用户数据失败:', e);
+        }
+      }
+    }
+    
+    // 查看商品
+    function viewProduct(id) {
+      showToast('商品详情功能开发中');
+    }
+    
+    // 订单操作
+    function payOrder(id) {
+      showToast('支付功能开发中');
+    }
+    
+    function cancelOrder(id) {
+      showToast('订单已取消');
+    }
+    
+    function confirmReceipt(id) {
+      showToast('确认收货成功');
+    }
+    
+    // 登录
+    // 关于
+    function showAbout() {
+      alert('烧烤食材售卖小程序\n\n为您提供新鲜优质的烧烤食材\n让您在家也能享受烧烤乐趣！\n\n版本：1.0.0 (Web 测试版)\n\n功能特性：\n• 微信一键登录/注册\n• 手机号验证码登录\n• 商品浏览/搜索\n• 购物车功能\n• 订单管理\n• 地址管理');
+    }
+    
+    // 搜索框回车
+    document.getElementById('searchInput')?.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') handleSearch();
+    });
+    
+    document.getElementById('shopSearchInput')?.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') handleShopSearch();
+    });
+    
+    // 初始化
+    console.log('页面初始化...');
+    console.log('showAddAddressFromCheckout:', typeof showAddAddressFromCheckout);
+    console.log('showAddAddress:', typeof showAddAddress);
+    
+    // 显式暴露到全局
+    window.showAddAddressFromCheckout = showAddAddressFromCheckout;
+    window.showAddAddress = showAddAddress;
+    console.log('函数已暴露到 window 对象');
+    
+    checkLoginStatus();  // 检查登录状态
+    runTests();
+  </script>
+</body>
+</html>
