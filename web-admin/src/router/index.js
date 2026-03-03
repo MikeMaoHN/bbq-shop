@@ -59,12 +59,19 @@ const router = createRouter({
 
 router.beforeEach((to, from, next) => {
   const authStore = useAuthStore()
-  
+
   if (to.path !== '/login' && !authStore.token) {
     next('/login')
   } else {
     next()
   }
+})
+
+// 根据路由 meta.title 更新浏览器标签页标题
+router.afterEach((to) => {
+  document.title = to.meta?.title
+    ? `${to.meta.title} - 烧烤食材管理系统`
+    : '烧烤食材管理系统'
 })
 
 export default router

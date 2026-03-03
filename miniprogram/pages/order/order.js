@@ -43,21 +43,30 @@ Page({
 
   async loadOrderItems(items) {
     try {
-      const orderItems = [];
-      let goodsAmount = 0;
-      
-      for (const item of items) {
-        const product = await api.getProductDetail(item.productId);
-        orderItems.push({
+      // 并发请求所有商品详情，避免串行等待
+      const products = await Promise.all(
+        items.map(item => api.getProductDetail(item.productId))
+      );
+
+      const orderItems = items.map((item, idx) => {
+        const product = products[idx];
+        let image = '';
+        try {
+          image = product.images ? JSON.parse(product.images)[0] : '';
+        } catch (e) {
+          image = '';
+        }
+        return {
           productId: product.id,
           name: product.name,
           price: product.price,
           quantity: item.quantity,
-          image: product.images ? JSON.parse(product.images)[0] : ''
-        });
-        goodsAmount += product.price * item.quantity;
-      }
-      
+          image
+        };
+      });
+
+      const goodsAmount = orderItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+
       this.setData({
         orderItems,
         goodsAmount,
@@ -65,6 +74,7 @@ Page({
       });
     } catch (error) {
       console.error('加载商品信息失败:', error);
+      wx.showToast({ title: '加载商品信息失败', icon: 'none' });
     }
   },
 

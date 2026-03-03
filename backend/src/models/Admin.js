@@ -1,22 +1,27 @@
 /**
- * 管理员模型 - SQLite 版本
+ * 管理员模型 - MySQL 版本
  */
-const db = require('../config/database');
+const pool = require('../config/database');
 const bcrypt = require('bcryptjs');
 
 class Admin {
-  static findByUsername(username) {
-    return db.prepare('SELECT * FROM admins WHERE username = ?').get(username) || null;
+  static async findByUsername(username) {
+    const [rows] = await pool.execute('SELECT * FROM admins WHERE username = ?', [username]);
+    return rows[0] || null;
   }
 
-  static findById(id) {
-    return db.prepare('SELECT * FROM admins WHERE id = ?').get(id) || null;
+  static async findById(id) {
+    const [rows] = await pool.execute('SELECT * FROM admins WHERE id = ?', [id]);
+    return rows[0] || null;
   }
 
   static async create({ username, password, role = 'admin' }) {
     const hashedPassword = await bcrypt.hash(password, 10);
-    const stmt = db.prepare('INSERT INTO admins (username, password, role) VALUES (?, ?, ?)');
-    return stmt.run(username, hashedPassword, role).lastInsertRowid;
+    const [result] = await pool.execute(
+      'INSERT INTO admins (username, password, role) VALUES (?, ?, ?)',
+      [username, hashedPassword, role]
+    );
+    return result.insertId;
   }
 
   static async verifyPassword(admin, password) {
@@ -25,11 +30,11 @@ class Admin {
 
   static async updatePassword(id, password) {
     const hashedPassword = await bcrypt.hash(password, 10);
-    db.prepare('UPDATE admins SET password = ? WHERE id = ?').run(hashedPassword, id);
+    await pool.execute('UPDATE admins SET password = ? WHERE id = ?', [hashedPassword, id]);
   }
 
-  static updateStatus(id, status) {
-    db.prepare('UPDATE admins SET status = ? WHERE id = ?').run(status, id);
+  static async updateStatus(id, status) {
+    await pool.execute('UPDATE admins SET status = ? WHERE id = ?', [status, id]);
   }
 }
 

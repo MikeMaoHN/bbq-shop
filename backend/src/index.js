@@ -13,19 +13,32 @@ const adminRoutes = require('./routes/admin')
 
 const app = express()
 
-// 中间件
+// CORS 配置：生产环境通过 CORS_ORIGIN 环境变量指定允许的域名（逗号分隔），开发环境设置 CORS_ORIGIN=* 允许所有
+const allowedOrigins = config.cors.origin === '*'
+  ? null
+  : config.cors.origin.split(',').map(s => s.trim())
+
 app.use(cors({
   origin: function (origin, callback) {
-    // 允许所有来源（开发环境）
-    if (!origin) return callback(null, true)
-    callback(null, true)
+    if (!origin) return callback(null, true) // 服务端对服务端请求
+    if (!allowedOrigins) return callback(null, true) // 允许所有
+    if (allowedOrigins.includes(origin)) return callback(null, true)
+    callback(new Error(`CORS policy: origin ${origin} not allowed`))
   },
   credentials: true
 }))
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
 
-// API 日志中间件
+// API 请求日志中间件
+app.use((req, res, next) => {
+  const start = Date.now()
+  res.on('finish', () => {
+    const duration = Date.now() - start
+    log.info(`${req.method} ${req.path} ${res.statusCode} - ${duration}ms`)
+  })
+  next()
+})
 
 // 静态文件服务（上传的图片）
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')))

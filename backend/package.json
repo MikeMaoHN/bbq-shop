@@ -6,8 +6,8 @@
   "scripts": {
     "start": "node src/index.js",
     "dev": "nodemon src/index.js",
-    "db:init": "sqlite3 database/bbq_shop.db < database/schema-sqlite.sql",
-    "db:seed": "sqlite3 database/bbq_shop.db < database/seed-sqlite.sql"
+    "db:init": "mysql -h $DB_HOST -u $DB_USER -p$DB_PASSWORD $DB_NAME < database/schema-mysql.sql",
+    "db:seed": "mysql -h $DB_HOST -u $DB_USER -p$DB_PASSWORD $DB_NAME < database/seed.sql"
   },
   "keywords": [
     "bbq",
@@ -19,7 +19,7 @@
   "license": "MIT",
   "dependencies": {
     "express": "^4.18.2",
-    "better-sqlite3": "^9.2.2",
+    "mysql2": "^3.6.5",
     "bcryptjs": "^2.4.3",
     "jsonwebtoken": "^9.0.2",
     "cors": "^2.8.5",

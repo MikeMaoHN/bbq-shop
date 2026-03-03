@@ -32,8 +32,11 @@ request.interceptors.response.use(
     if (error.response?.status === 401) {
       localStorage.removeItem('token')
       window.location.href = '/login'
+    } else if (error.code === 'ECONNABORTED') {
+      ElMessage.error('请求超时，请检查网络连接')
+    } else {
+      ElMessage.error(error.response?.data?.message || error.message || '网络错误')
     }
-    ElMessage.error(error.message || '网络错误')
     return Promise.reject(error)
   }
 )

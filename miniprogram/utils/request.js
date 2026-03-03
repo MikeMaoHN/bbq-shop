@@ -31,6 +31,7 @@ class Request {
         url: this.baseUrl + options.url,
         method: options.method || 'GET',
         data: options.data || {},
+        timeout: 10000, // 请求超时 10 秒
         header: {
           'Content-Type': 'application/json',
           'Authorization': this.getToken() ? `Bearer ${this.getToken()}` : ''
@@ -52,8 +53,9 @@ class Request {
           }
         },
         fail: (err) => {
+          const isTimeout = err.errMsg && err.errMsg.includes('timeout');
           wx.showToast({
-            title: '网络错误',
+            title: isTimeout ? '请求超时，请检查网络' : '网络错误，请稍后重试',
             icon: 'none'
           });
           reject(err);

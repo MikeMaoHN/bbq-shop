@@ -1,76 +1,104 @@
 /**
- * 购物车模型 - SQLite 版本
+ * 购物车模型 - MySQL 版本
  */
-const db = require('../config/database');
+const pool = require('../config/database');
 
 class CartItem {
-  static findByUserId(userId) {
-    return db.prepare(`
-      SELECT ci.*, p.name, p.price, p.images, p.stock, p.status 
-      FROM cart_items ci 
-      INNER JOIN products p ON ci.product_id = p.id 
-      WHERE ci.user_id = ? 
-      ORDER BY ci.created_at DESC
-    `).all(userId);
+  static async findByUserId(userId) {
+    const [rows] = await pool.execute(
+      `SELECT ci.*, p.name, p.price, p.images, p.stock, p.status
+       FROM cart_items ci
+       INNER JOIN products p ON ci.product_id = p.id
+       WHERE ci.user_id = ?
+       ORDER BY ci.created_at DESC`,
+      [userId]
+    );
+    return rows;
   }
 
-  static findById(id) {
-    return db.prepare(`
-      SELECT ci.*, p.name, p.price, p.images, p.stock, p.status 
-      FROM cart_items ci 
-      INNER JOIN products p ON ci.product_id = p.id 
-      WHERE ci.id = ?
-    `).get(id) || null;
+  static async findById(id) {
+    const [rows] = await pool.execute(
+      `SELECT ci.*, p.name, p.price, p.images, p.stock, p.status
+       FROM cart_items ci
+       INNER JOIN products p ON ci.product_id = p.id
+       WHERE ci.id = ?`,
+      [id]
+    );
+    return rows[0] || null;
   }
 
-  static findByUserAndProduct(userId, productId) {
-    return db.prepare('SELECT * FROM cart_items WHERE user_id = ? AND product_id = ?').get(userId, productId) || null;
+  static async findByUserAndProduct(userId, productId) {
+    const [rows] = await pool.execute(
+      'SELECT * FROM cart_items WHERE user_id = ? AND product_id = ?',
+      [userId, productId]
+    );
+    return rows[0] || null;
   }
 
-  static addOrUpdate(userId, productId, quantity, checked = 1) {
-    const existing = this.findByUserAndProduct(userId, productId);
-    
+  static async addOrUpdate(userId, productId, quantity, checked = 1) {
+    const existing = await this.findByUserAndProduct(userId, productId);
+
     if (existing) {
-      db.prepare('UPDATE cart_items SET quantity = quantity + ?, checked = ? WHERE id = ?').run(quantity, checked, existing.id);
+      await pool.execute(
+        'UPDATE cart_items SET quantity = quantity + ?, checked = ? WHERE id = ?',
+        [quantity, checked, existing.id]
+      );
       return existing.id;
     } else {
-      const stmt = db.prepare('INSERT INTO cart_items (user_id, product_id, quantity, checked) VALUES (?, ?, ?, ?)');
-      return stmt.run(userId, productId, quantity, checked).lastInsertRowid;
+      const [result] = await pool.execute(
+        'INSERT INTO cart_items (user_id, product_id, quantity, checked) VALUES (?, ?, ?, ?)',
+        [userId, productId, quantity, checked]
+      );
+      return result.insertId;
     }
   }
 
-  static updateQuantity(id, userId, quantity) {
-    db.prepare('UPDATE cart_items SET quantity = ? WHERE id = ? AND user_id = ?').run(quantity, id, userId);
+  static async updateQuantity(id, userId, quantity) {
+    await pool.execute(
+      'UPDATE cart_items SET quantity = ? WHERE id = ? AND user_id = ?',
+      [quantity, id, userId]
+    );
   }
 
-  static updateChecked(id, userId, checked) {
-    db.prepare('UPDATE cart_items SET checked = ? WHERE id = ? AND user_id = ?').run(checked ? 1 : 0, id, userId);
+  static async updateChecked(id, userId, checked) {
+    await pool.execute(
+      'UPDATE cart_items SET checked = ? WHERE id = ? AND user_id = ?',
+      [checked ? 1 : 0, id, userId]
+    );
   }
 
-  static updateAllChecked(userId, checked) {
-    db.prepare('UPDATE cart_items SET checked = ? WHERE user_id = ?').run(checked ? 1 : 0, userId);
+  static async updateAllChecked(userId, checked) {
+    await pool.execute(
+      'UPDATE cart_items SET checked = ? WHERE user_id = ?',
+      [checked ? 1 : 0, userId]
+    );
   }
 
-  static delete(id, userId) {
-    db.prepare('DELETE FROM cart_items WHERE id = ? AND user_id = ?').run(id, userId);
+  static async delete(id, userId) {
+    await pool.execute('DELETE FROM cart_items WHERE id = ? AND user_id = ?', [id, userId]);
   }
 
-  static deleteByUserAndProduct(userId, productId) {
-    db.prepare('DELETE FROM cart_items WHERE user_id = ? AND product_id = ?').run(userId, productId);
+  static async deleteByUserAndProduct(userId, productId) {
+    await pool.execute(
+      'DELETE FROM cart_items WHERE user_id = ? AND product_id = ?',
+      [userId, productId]
+    );
   }
 
-  static clear(userId) {
-    db.prepare('DELETE FROM cart_items WHERE user_id = ?').run(userId);
+  static async clear(userId) {
+    await pool.execute('DELETE FROM cart_items WHERE user_id = ?', [userId]);
   }
 
-  static getCheckedItems(userId) {
-    return db.prepare(`
-      SELECT ci.*, p.name, p.price, p.images, p.stock, p.status 
-      FROM cart_items ci 
-      INNER JOIN products p ON ci.product_id = p.id 
-      WHERE ci.user_id = ? AND ci.checked = 1 AND p.status = 1
-      ORDER BY ci.created_at DESC
-    `).all(userId);
+  static async getCheckedItems(userId) {
+    const [rows] = await pool.execute(
+      `SELECT ci.*, p.name, p.price, p.images, p.stock, p.status
+       FROM cart_items ci
+       INNER JOIN products p ON ci.product_id = p.id
+       WHERE ci.user_id = ? AND ci.checked = 1 AND p.status = 1
+       ORDER BY ci.created_at DESC`,
+      [userId]
+    );
+    return rows;
   }
 }
 
