@@ -6,18 +6,18 @@ const bcrypt = require('bcryptjs');
 
 class Admin {
   static async findByUsername(username) {
-    const [rows] = await pool.execute('SELECT * FROM admins WHERE username = ?', [username]);
+    const [rows] = await pool.query('SELECT * FROM admins WHERE username = ?', [username]);
     return rows[0] || null;
   }
 
   static async findById(id) {
-    const [rows] = await pool.execute('SELECT * FROM admins WHERE id = ?', [id]);
+    const [rows] = await pool.query('SELECT * FROM admins WHERE id = ?', [id]);
     return rows[0] || null;
   }
 
   static async create({ username, password, role = 'admin' }) {
     const hashedPassword = await bcrypt.hash(password, 10);
-    const [result] = await pool.execute(
+    const [result] = await pool.query(
       'INSERT INTO admins (username, password, role) VALUES (?, ?, ?)',
       [username, hashedPassword, role]
     );
@@ -30,11 +30,11 @@ class Admin {
 
   static async updatePassword(id, password) {
     const hashedPassword = await bcrypt.hash(password, 10);
-    await pool.execute('UPDATE admins SET password = ? WHERE id = ?', [hashedPassword, id]);
+    await pool.query('UPDATE admins SET password = ? WHERE id = ?', [hashedPassword, id]);
   }
 
   static async updateStatus(id, status) {
-    await pool.execute('UPDATE admins SET status = ? WHERE id = ?', [status, id]);
+    await pool.query('UPDATE admins SET status = ? WHERE id = ?', [status, id]);
   }
 }
 

@@ -4,7 +4,7 @@
  */
 
 // 服务器地址：开发时填写局域网 IP，生产时替换为正式域名
-const HOST = 'http://10.0.96.252:3000'
+const HOST = 'http://47.113.189.235:3000'
 
 module.exports = {
   // API 基础地址

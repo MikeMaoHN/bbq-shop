@@ -5,7 +5,7 @@ const pool = require('../config/database');
 
 class CartItem {
   static async findByUserId(userId) {
-    const [rows] = await pool.execute(
+    const [rows] = await pool.query(
       `SELECT ci.*, p.name, p.price, p.images, p.stock, p.status
        FROM cart_items ci
        INNER JOIN products p ON ci.product_id = p.id
@@ -17,7 +17,7 @@ class CartItem {
   }
 
   static async findById(id) {
-    const [rows] = await pool.execute(
+    const [rows] = await pool.query(
       `SELECT ci.*, p.name, p.price, p.images, p.stock, p.status
        FROM cart_items ci
        INNER JOIN products p ON ci.product_id = p.id
@@ -28,7 +28,7 @@ class CartItem {
   }
 
   static async findByUserAndProduct(userId, productId) {
-    const [rows] = await pool.execute(
+    const [rows] = await pool.query(
       'SELECT * FROM cart_items WHERE user_id = ? AND product_id = ?',
       [userId, productId]
     );
@@ -39,13 +39,13 @@ class CartItem {
     const existing = await this.findByUserAndProduct(userId, productId);
 
     if (existing) {
-      await pool.execute(
+      await pool.query(
         'UPDATE cart_items SET quantity = quantity + ?, checked = ? WHERE id = ?',
         [quantity, checked, existing.id]
       );
       return existing.id;
     } else {
-      const [result] = await pool.execute(
+      const [result] = await pool.query(
         'INSERT INTO cart_items (user_id, product_id, quantity, checked) VALUES (?, ?, ?, ?)',
         [userId, productId, quantity, checked]
       );
@@ -54,43 +54,43 @@ class CartItem {
   }
 
   static async updateQuantity(id, userId, quantity) {
-    await pool.execute(
+    await pool.query(
       'UPDATE cart_items SET quantity = ? WHERE id = ? AND user_id = ?',
       [quantity, id, userId]
     );
   }
 
   static async updateChecked(id, userId, checked) {
-    await pool.execute(
+    await pool.query(
       'UPDATE cart_items SET checked = ? WHERE id = ? AND user_id = ?',
       [checked ? 1 : 0, id, userId]
     );
   }
 
   static async updateAllChecked(userId, checked) {
-    await pool.execute(
+    await pool.query(
       'UPDATE cart_items SET checked = ? WHERE user_id = ?',
       [checked ? 1 : 0, userId]
     );
   }
 
   static async delete(id, userId) {
-    await pool.execute('DELETE FROM cart_items WHERE id = ? AND user_id = ?', [id, userId]);
+    await pool.query('DELETE FROM cart_items WHERE id = ? AND user_id = ?', [id, userId]);
   }
 
   static async deleteByUserAndProduct(userId, productId) {
-    await pool.execute(
+    await pool.query(
       'DELETE FROM cart_items WHERE user_id = ? AND product_id = ?',
       [userId, productId]
     );
   }
 
   static async clear(userId) {
-    await pool.execute('DELETE FROM cart_items WHERE user_id = ?', [userId]);
+    await pool.query('DELETE FROM cart_items WHERE user_id = ?', [userId]);
   }
 
   static async getCheckedItems(userId) {
-    const [rows] = await pool.execute(
+    const [rows] = await pool.query(
       `SELECT ci.*, p.name, p.price, p.images, p.stock, p.status
        FROM cart_items ci
        INNER JOIN products p ON ci.product_id = p.id

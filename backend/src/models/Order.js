@@ -11,7 +11,7 @@ class Order {
       status, remark, receiverName, receiverPhone, receiverAddress
     } = data;
 
-    const [result] = await pool.execute(
+    const [result] = await pool.query(
       `INSERT INTO orders (order_no, user_id, total_amount, pay_amount, freight_amount,
        status, remark, receiver_name, receiver_phone, receiver_address)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -23,7 +23,7 @@ class Order {
 
   static async addItems(orderId, items) {
     for (const item of items) {
-      await pool.execute(
+      await pool.query(
         'INSERT INTO order_items (order_id, product_id, product_name, product_image, price, quantity) VALUES (?, ?, ?, ?, ?, ?)',
         [orderId, item.productId, item.productName, item.productImage, item.price, item.quantity]
       );
@@ -31,18 +31,18 @@ class Order {
   }
 
   static async findById(id) {
-    const [rows] = await pool.execute('SELECT * FROM orders WHERE id = ?', [id]);
+    const [rows] = await pool.query('SELECT * FROM orders WHERE id = ?', [id]);
     if (!rows[0]) return null;
 
-    const [items] = await pool.execute('SELECT * FROM order_items WHERE order_id = ?', [id]);
+    const [items] = await pool.query('SELECT * FROM order_items WHERE order_id = ?', [id]);
     return { ...rows[0], items };
   }
 
   static async findByOrderNo(orderNo) {
-    const [rows] = await pool.execute('SELECT * FROM orders WHERE order_no = ?', [orderNo]);
+    const [rows] = await pool.query('SELECT * FROM orders WHERE order_no = ?', [orderNo]);
     if (!rows[0]) return null;
 
-    const [items] = await pool.execute('SELECT * FROM order_items WHERE order_id = ?', [rows[0].id]);
+    const [items] = await pool.query('SELECT * FROM order_items WHERE order_id = ?', [rows[0].id]);
     return { ...rows[0], items };
   }
 
@@ -58,12 +58,12 @@ class Order {
       params.push(status);
     }
 
-    const [list] = await pool.execute(
+    const [list] = await pool.query(
       `SELECT * FROM orders ${where} ORDER BY created_at DESC LIMIT ? OFFSET ?`,
       [...params, limit, offset]
     );
 
-    const [[{ total }]] = await pool.execute(
+    const [[{ total }]] = await pool.query(
       `SELECT COUNT(*) as total FROM orders ${where}`,
       params
     );
@@ -72,7 +72,7 @@ class Order {
     if (list.length > 0) {
       const orderIds = list.map(o => o.id);
       const placeholders = orderIds.map(() => '?').join(',');
-      const [allItems] = await pool.execute(
+      const [allItems] = await pool.query(
         `SELECT * FROM order_items WHERE order_id IN (${placeholders})`,
         orderIds
       );
@@ -104,18 +104,18 @@ class Order {
     if (extraData.cancelReason) { fields.push('cancel_reason = ?'); values.push(extraData.cancelReason); }
 
     values.push(id);
-    await pool.execute(`UPDATE orders SET ${fields.join(', ')} WHERE id = ?`, values);
+    await pool.query(`UPDATE orders SET ${fields.join(', ')} WHERE id = ?`, values);
   }
 
   static async ship(id, logisticsNo, logisticsCompany) {
-    await pool.execute(
+    await pool.query(
       'UPDATE orders SET status = 2, logistics_no = ?, logistics_company = ?, shipped_at = NOW() WHERE id = ? AND status = 1',
       [logisticsNo, logisticsCompany, id]
     );
   }
 
   static async cancel(id, reason) {
-    await pool.execute(
+    await pool.query(
       'UPDATE orders SET status = 4, cancel_reason = ?, cancelled_at = NOW() WHERE id = ? AND status = 0',
       [reason, id]
     );
@@ -131,7 +131,7 @@ class Order {
     if (status !== undefined && status !== null) { where += ' AND o.status = ?'; params.push(status); }
     if (userId) { where += ' AND o.user_id = ?'; params.push(userId); }
 
-    const [list] = await pool.execute(
+    const [list] = await pool.query(
       `SELECT o.*, u.nickname as user_nickname, u.phone as user_phone
        FROM orders o
        LEFT JOIN users u ON o.user_id = u.id
@@ -141,7 +141,7 @@ class Order {
       [...params, limit, offset]
     );
 
-    const [[{ total }]] = await pool.execute(
+    const [[{ total }]] = await pool.query(
       `SELECT COUNT(*) as total FROM orders o ${where}`,
       params
     );
@@ -150,7 +150,7 @@ class Order {
     if (list.length > 0) {
       const orderIds = list.map(o => o.id);
       const placeholders = orderIds.map(() => '?').join(',');
-      const [allItems] = await pool.execute(
+      const [allItems] = await pool.query(
         `SELECT * FROM order_items WHERE order_id IN (${placeholders})`,
         orderIds
       );
@@ -170,7 +170,7 @@ class Order {
   }
 
   static async getStats(days = 7) {
-    const [orderStatsRows] = await pool.execute(
+    const [orderStatsRows] = await pool.query(
       `SELECT
         COUNT(*) as total_orders,
         SUM(CASE WHEN status = 0 THEN 1 ELSE 0 END) as unpaid_orders,
@@ -184,7 +184,7 @@ class Order {
       [days]
     );
 
-    const [productStats] = await pool.execute(
+    const [productStats] = await pool.query(
       `SELECT p.id, p.name, SUM(oi.quantity) as sales
        FROM order_items oi
        INNER JOIN products p ON oi.product_id = p.id
