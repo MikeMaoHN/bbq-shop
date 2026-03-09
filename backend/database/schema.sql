@@ -202,8 +202,10 @@ CREATE TABLE IF NOT EXISTS operation_logs (
 -- 初始化数据
 
 -- 插入默认管理员 (密码：admin123, bcrypt 加密)
+-- 密码哈希生成方式：bcrypt.hash('admin123', 10)
+-- 注意：首次部署时请修改默认密码！
 INSERT INTO admins (username, password, role, status) VALUES 
-('admin', '$2b$10$rQZ9vXJxLxKxLxKxLxKxLeQZ9vXJxLxKxLxKxLxKxLxKxLxKxLxKxL', 'super_admin', 1);
+('admin', '$2b$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', 'super_admin', 1);
 
 -- 插入商品分类
 INSERT INTO categories (name, icon, sort, status) VALUES 

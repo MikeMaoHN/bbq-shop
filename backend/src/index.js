@@ -6,6 +6,9 @@ const cors = require('cors')
 const path = require('path')
 const config = require('./config')
 const Logger = require('./utils/logger')
+const { errorHandler, notFoundHandler } = require('./middleware/errorHandler')
+const { apiLimiter } = require('./middleware/rateLimiter')
+const { tokenRefreshMiddleware } = require('./middleware/auth')
 const log = new Logger('Server')
 
 const apiRoutes = require('./routes/index')
@@ -30,6 +33,9 @@ app.use(cors({
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
 
+// Token 自动刷新中间件（在认证路由之前）
+app.use(tokenRefreshMiddleware)
+
 // API 请求日志中间件
 app.use((req, res, next) => {
   const start = Date.now()
@@ -43,35 +49,24 @@ app.use((req, res, next) => {
 // 静态文件服务（上传的图片）
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')))
 
+// API 限流
+app.use('/api', apiLimiter)
+app.use('/admin/api', apiLimiter)
+
 // API 路由
 app.use('/api', apiRoutes)
 app.use('/admin/api', adminRoutes)
 
-// 健康检查
+// 健康检查（不限流）
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() })
 })
 
 // 404 处理
-app.use((req, res) => {
-  log.warn(`404 - ${req.method} ${req.path}`)
-  res.status(404).json({
-    code: 404,
-    message: '接口不存在',
-    timestamp: Date.now()
-  })
-})
+app.use(notFoundHandler)
 
 // 全局错误处理
-app.use((err, req, res, next) => {
-  log.error('全局错误:', err.message)
-  log.error('错误堆栈:', err.stack)
-  res.status(500).json({
-    code: 500,
-    message: err.message || '服务器错误',
-    timestamp: Date.now()
-  })
-})
+app.use(errorHandler)
 
 // 启动服务
 const server = app.listen(config.port, () => {

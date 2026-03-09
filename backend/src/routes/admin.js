@@ -3,6 +3,15 @@
 const express = require('express');
 const router = express.Router();
 const { adminMiddleware } = require('../middleware/auth');
+const { loginLimiter, sensitiveLimiter, uploadLimiter } = require('../middleware/rateLimiter');
+const { 
+  adminLoginValidation, 
+  passwordChangeValidation, 
+  productValidation,
+  idParamValidation,
+  paginationValidation 
+} = require('../middleware/validation');
+const operationLogMiddleware = require('../middleware/operationLog');
 const multer = require('multer');
 const path = require('path');
 const config = require('../config');
@@ -47,49 +56,50 @@ if (!fs.existsSync(config.upload.path)) {
   fs.mkdirSync(config.upload.path, { recursive: true });
 }
 
-// 管理员认证
-router.post('/login', AdminAuthController.login);
+// 管理员认证（限流）
+router.post('/login', loginLimiter, adminLoginValidation, AdminAuthController.login);
 
 // 需要管理员权限的路由
 router.use(adminMiddleware);
+router.use(operationLogMiddleware); // 操作日志中间件
 
 // 管理员信息
 router.get('/admin/info', AdminAuthController.getCurrentAdmin);
-router.put('/admin/password', AdminAuthController.changePassword);
+router.put('/admin/password', sensitiveLimiter, passwordChangeValidation, AdminAuthController.changePassword);
 
 // 分类管理
-router.get('/categories', CategoryController.listForAdmin);
-router.get('/categories/:id', CategoryController.detail);
+router.get('/categories', paginationValidation, CategoryController.listForAdmin);
+router.get('/categories/:id', idParamValidation, CategoryController.detail);
 router.post('/categories', CategoryController.create);
-router.put('/categories/:id', CategoryController.update);
-router.delete('/categories/:id', CategoryController.delete);
+router.put('/categories/:id', idParamValidation, CategoryController.update);
+router.delete('/categories/:id', idParamValidation, CategoryController.delete);
 
 // 商品管理
-router.get('/products', ProductController.listForAdmin);
-router.get('/products/:id', ProductController.detail);
-router.post('/products', ProductController.create);
-router.put('/products/:id', ProductController.update);
-router.delete('/products/:id', ProductController.delete);
+router.get('/products', paginationValidation, ProductController.listForAdmin);
+router.get('/products/:id', idParamValidation, ProductController.detail);
+router.post('/products', productValidation, ProductController.create);
+router.put('/products/:id', idParamValidation, productValidation, ProductController.update);
+router.delete('/products/:id', idParamValidation, ProductController.delete);
 router.put('/products/batch-status', ProductController.batchUpdateStatus);
-router.put('/products/:id/stock', AdminStockController.updateStock);
+router.put('/products/:id/stock', idParamValidation, AdminStockController.updateStock);
 
 // 库存管理
-router.get('/stock/products', AdminStockController.getProducts);
-router.get('/stock/logs', AdminStockController.getStockLogs);
-router.get('/stock/low-stock', AdminStockController.getLowStockProducts);
+router.get('/stock/products', paginationValidation, AdminStockController.getProducts);
+router.get('/stock/logs', paginationValidation, AdminStockController.getStockLogs);
+router.get('/stock/low-stock', paginationValidation, AdminStockController.getLowStockProducts);
 
 // 订单管理
-router.get('/orders', AdminOrderController.list);
-router.get('/orders/:id', AdminOrderController.detail);
-router.put('/orders/:id/ship', AdminOrderController.ship);
-router.put('/orders/:id/remark', AdminOrderController.remark);
+router.get('/orders', paginationValidation, AdminOrderController.list);
+router.get('/orders/:id', idParamValidation, AdminOrderController.detail);
+router.put('/orders/:id/ship', idParamValidation, AdminOrderController.ship);
+router.put('/orders/:id/remark', idParamValidation, AdminOrderController.remark);
 
 // 统计数据
 router.get('/stats', AdminOrderController.stats);
 router.get('/stats/low-stock', AdminOrderController.getLowStockProducts);
 
-// 文件上传
-router.post('/upload/image', upload.single('file'), UploadController.uploadImage);
-router.post('/upload/images', upload.array('files', 10), UploadController.uploadImages);
+// 文件上传（限流）
+router.post('/upload/image', uploadLimiter, upload.single('file'), UploadController.uploadImage);
+router.post('/upload/images', uploadLimiter, upload.array('files', 10), UploadController.uploadImages);
 
 module.exports = router;

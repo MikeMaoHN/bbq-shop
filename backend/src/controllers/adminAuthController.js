@@ -5,6 +5,7 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const config = require('../config');
 const Response = require('../utils/response');
+const { generateToken } = require('../middleware/auth');
 const Admin = require('../models/Admin');
 
 class AdminAuthController {
@@ -36,10 +37,9 @@ class AdminAuthController {
       }
 
       // 生成 JWT token
-      const token = jwt.sign(
-        { adminId: admin.id, username: admin.username, isAdmin: true, role: admin.role },
-        config.jwt.secret,
-        { expiresIn: config.jwt.expiresIn }
+      const token = generateToken(
+        { adminId: admin.id, username: admin.username, role: admin.role },
+        true
       );
 
       res.json(Response.success({

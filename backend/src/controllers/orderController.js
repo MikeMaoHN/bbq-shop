@@ -7,7 +7,27 @@ const Order = require('../models/Order');
 const CartItem = require('../models/CartItem');
 const Product = require('../models/Product');
 const StockLog = require('../models/StockLog');
+const WeChatPayService = require('../services/wechatPayService');
 const pool = require('../config/database');
+const config = require('../config');
+const Logger = require('../utils/logger');
+const log = new Logger('OrderController');
+
+// 支付模式常量
+const PAYMENT_MODE = {
+  MOCK: 'MOCK',
+  REAL: 'REAL'
+};
+
+/**
+ * 检查是否启用真实支付
+ */
+function isRealPayment() {
+  return config.wxPay.mode === PAYMENT_MODE.REAL && 
+         config.wxPay.mchid && 
+         config.wxPay.mchid !== 'your_merchant_id' &&
+         config.wxPay.serialNo;
+}
 
 // 订单状态常量
 const ORDER_STATUS = {
@@ -30,8 +50,8 @@ class OrderController {
   }
 
   /**
-   * 创建订单
-   * 事务保证：地址验证、库存校验、订单插入均在同一事务内完成
+   * 创建订单并获取支付参数
+   * 事务保证：地址验证、库存校验、订单插入、支付参数生成均在同一事务内完成
    */
   static async create(req, res) {
     const conn = await pool.getConnection();
@@ -123,7 +143,35 @@ class OrderController {
       await conn.commit();
 
       const order = await Order.findById(orderId);
-      res.json(Response.success(order, '订单创建成功，请尽快支付'));
+      
+      // 根据支付模式返回不同结果
+      let payParams = null;
+      let paymentMode = config.wxPay.mode;
+      
+      if (isRealPayment()) {
+        try {
+          const payService = new WeChatPayService();
+          const user = await Order._getUserOpenid(userId);
+          payParams = await payService.createJSAPIOrder({
+            outTradeNo: orderNo,
+            totalAmount,
+            openid: user.openid,
+            description: `烧烤食材订单 ${orderNo}`
+          });
+          log.info(`订单 ${orderNo} 已生成真实支付参数`);
+        } catch (error) {
+          log.error('生成真实支付参数失败，降级为模拟支付:', error.message);
+          paymentMode = PAYMENT_MODE.MOCK;
+        }
+      } else {
+        log.info(`订单 ${orderNo} 使用模拟支付模式`);
+      }
+
+      res.json(Response.success({
+        order,
+        payParams,
+        paymentMode
+      }, `订单创建成功，${isRealPayment() ? '请调用支付' : '模拟支付已开启'}`));
     } catch (error) {
       await conn.rollback();
       console.error('创建订单错误:', error);
@@ -133,9 +181,8 @@ class OrderController {
     }
   }
 
-  /**
-   * 模拟支付（实际项目中对接微信支付）
-   * 事务保证：库存扣减、订单状态更新、购物车清理均在同一事务内
+    /**
+   * 发起支付（支持模拟/真实模式）
    */
   static async pay(req, res) {
     const conn = await pool.getConnection();
@@ -162,52 +209,84 @@ class OrderController {
         return res.status(400).json(Response.error('订单状态不正确'));
       }
 
-      // 扣减库存并记录流水（FOR UPDATE 防止并发超卖）
-      for (const item of order.items) {
-        const [productRows] = await conn.execute(
-          'SELECT * FROM products WHERE id = ? FOR UPDATE',
-          [item.product_id]
-        );
+      // 根据支付模式处理
+      if (!isRealPayment()) {
+        // ========== 模拟支付模式 ==========
+        log.warn(`订单 ${order.order_no} 使用模拟支付（开发模式）`);
+        
+        for (const item of order.items) {
+          const [productRows] = await conn.execute(
+            'SELECT * FROM products WHERE id = ? FOR UPDATE',
+            [item.product_id]
+          );
 
-        if (!productRows.length || productRows[0].stock < item.quantity) {
-          await conn.rollback();
-          return res.status(400).json(Response.error(`商品库存不足，支付失败`));
+          if (!productRows.length || productRows[0].stock < item.quantity) {
+            await conn.rollback();
+            return res.status(400).json(Response.error(`商品库存不足，支付失败`));
+          }
+
+          const beforeStock = productRows[0].stock;
+          const afterStock = beforeStock - item.quantity;
+
+          await conn.execute(
+            'UPDATE products SET stock = ? WHERE id = ?',
+            [afterStock, item.product_id]
+          );
+
+          await StockLog.create({
+            productId: item.product_id,
+            changeQty: -item.quantity,
+            beforeStock,
+            afterStock,
+            reason: '模拟支付',
+            referenceType: 'order',
+            referenceId: orderId
+          });
         }
 
-        const beforeStock = productRows[0].stock;
-        const afterStock = beforeStock - item.quantity;
-
         await conn.execute(
-          'UPDATE products SET stock = ? WHERE id = ?',
-          [afterStock, item.product_id]
+          'UPDATE orders SET status = ?, paid_at = NOW() WHERE id = ?',
+          [ORDER_STATUS.PENDING_SHIP, orderId]
         );
 
-        await StockLog.create({
-          productId: item.product_id,
-          changeQty: -item.quantity,
-          beforeStock,
-          afterStock,
-          reason: '下单',
-          referenceType: 'order',
-          referenceId: orderId
+        for (const item of order.items) {
+          await CartItem.deleteByUserAndProduct(userId, item.product_id);
+        }
+
+        await conn.commit();
+
+        const updatedOrder = await Order.findById(orderId);
+        return res.json(Response.success({
+          order: updatedOrder,
+          paymentMode: 'MOCK'
+        }, '支付成功（模拟支付）'));
+      }
+
+      // ========== 真实支付模式 ==========
+      await conn.rollback();
+      
+      try {
+        const payService = new WeChatPayService();
+        const user = await Order._getUserOpenid(userId);
+        
+        const payParams = await payService.createJSAPIOrder({
+          outTradeNo: order.order_no,
+          totalAmount: order.pay_amount,
+          openid: user.openid,
+          description: `烧烤食材订单 ${order.order_no}`
         });
+
+        log.info(`订单 ${order.order_no} 已生成真实支付参数`);
+
+        res.json(Response.success({
+          payParams,
+          order,
+          paymentMode: 'REAL'
+        }, '请调用 wx.requestPayment 完成支付'));
+      } catch (error) {
+        log.error('生成真实支付参数失败:', error.message);
+        return res.status(500).json(Response.error(`支付服务错误：${error.message}`));
       }
-
-      // 更新订单状态为待发货
-      await conn.execute(
-        'UPDATE orders SET status = ?, paid_at = NOW() WHERE id = ?',
-        [ORDER_STATUS.PENDING_SHIP, orderId]
-      );
-
-      // 清空购物车中已购买的商品
-      for (const item of order.items) {
-        await CartItem.deleteByUserAndProduct(userId, item.product_id);
-      }
-
-      await conn.commit();
-
-      const updatedOrder = await Order.findById(orderId);
-      res.json(Response.success(updatedOrder, '支付成功'));
     } catch (error) {
       await conn.rollback();
       console.error('支付错误:', error);
@@ -215,6 +294,90 @@ class OrderController {
     } finally {
       conn.release();
     }
+  }
+
+  /**
+   * 微信支付回调
+   */
+  static async payCallback(req, res) {
+    try {
+      const payService = new WeChatPayService();
+      const data = await payService.handleCallback(req);
+
+      log.info('支付回调:', data);
+
+      if (data.tradeState === 'SUCCESS') {
+        const conn = await pool.getConnection();
+        try {
+          await conn.beginTransaction();
+
+          const order = await Order.findByOrderNo(data.outTradeNo);
+          if (order && order.status === ORDER_STATUS.UNPAID) {
+            // 扣减库存
+            for (const item of order.items) {
+              const [productRows] = await conn.execute(
+                'SELECT * FROM products WHERE id = ? FOR UPDATE',
+                [item.product_id]
+              );
+
+              const beforeStock = productRows[0].stock;
+              const afterStock = beforeStock - item.quantity;
+
+              await conn.execute(
+                'UPDATE products SET stock = ? WHERE id = ?',
+                [afterStock, item.product_id]
+              );
+
+              await StockLog.create({
+                productId: item.product_id,
+                changeQty: -item.quantity,
+                beforeStock,
+                afterStock,
+                reason: '支付成功',
+                referenceType: 'order',
+                referenceId: order.id
+              });
+            }
+
+            // 更新订单状态
+            await conn.execute(
+              'UPDATE orders SET status = ?, paid_at = NOW(), transaction_id = ? WHERE id = ?',
+              [ORDER_STATUS.PENDING_SHIP, data.transactionId, order.id]
+            );
+
+            // 清空购物车
+            for (const item of order.items) {
+              await CartItem.deleteByUserAndProduct(order.user_id, item.product_id);
+            }
+
+            await conn.commit();
+            log.info(`订单 ${order.order_no} 支付成功`);
+          }
+
+          const response = payService.buildCallbackResponse();
+          res.json(response);
+        } catch (error) {
+          await conn.rollback();
+          throw error;
+        } finally {
+          conn.release();
+        }
+      } else {
+        res.json(payService.buildCallbackResponse());
+      }
+    } catch (error) {
+      log.error('处理支付回调错误:', error.message);
+      res.status(400).json({ code: 'FAIL', message: error.message });
+    }
+  }
+
+  /**
+   * 获取用户 OpenID（内部方法）
+   */
+  static async _getUserOpenid(userId) {
+    const [rows] = await pool.query('SELECT openid FROM users WHERE id = ?', [userId]);
+    if (!rows.length) throw new Error('用户不存在');
+    return rows[0];
   }
 
   /**

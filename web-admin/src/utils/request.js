@@ -21,6 +21,12 @@ request.interceptors.request.use(
 
 request.interceptors.response.use(
   response => {
+    // 检查是否有新的 Token（自动刷新）
+    const newToken = response.headers['x-new-token']
+    if (newToken) {
+      localStorage.setItem('token', newToken)
+    }
+    
     const res = response.data
     if (res.code !== 200) {
       ElMessage.error(res.message || '请求失败')
@@ -31,6 +37,7 @@ request.interceptors.response.use(
   error => {
     if (error.response?.status === 401) {
       localStorage.removeItem('token')
+      ElMessage.error('登录已过期，请重新登录')
       window.location.href = '/login'
     } else if (error.code === 'ECONNABORTED') {
       ElMessage.error('请求超时，请检查网络连接')

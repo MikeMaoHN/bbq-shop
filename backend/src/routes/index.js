@@ -4,6 +4,13 @@
 const express = require('express');
 const router = express.Router();
 const { authMiddleware } = require('../middleware/auth');
+const { loginLimiter, sensitiveLimiter } = require('../middleware/rateLimiter');
+const { 
+  orderCreateValidation, 
+  paginationValidation, 
+  idParamValidation 
+} = require('../middleware/validation');
+const operationLogMiddleware = require('../middleware/operationLog');
 
 const AuthController = require('../controllers/authController');
 const CategoryController = require('../controllers/categoryController');
@@ -12,8 +19,8 @@ const CartController = require('../controllers/cartController');
 const AddressController = require('../controllers/addressController');
 const OrderController = require('../controllers/orderController');
 
-// 认证
-router.post('/auth/wx-login', AuthController.wxLogin);
+// 认证（限流）
+router.post('/auth/wx-login', loginLimiter, AuthController.wxLogin);
 
 // 用户
 router.get('/user/info', authMiddleware, AuthController.getCurrentUser);
@@ -23,32 +30,35 @@ router.put('/user/info', authMiddleware, AuthController.updateCurrentUser);
 router.get('/categories', CategoryController.list);
 
 // 商品
-router.get('/products', ProductController.list);
-router.get('/products/:id', ProductController.detail);
+router.get('/products', paginationValidation, ProductController.list);
+router.get('/products/:id', idParamValidation, ProductController.detail);
 
 // 购物车
 router.get('/cart', authMiddleware, CartController.list);
 router.post('/cart/items', authMiddleware, CartController.add);
-router.put('/cart/items/:id', authMiddleware, CartController.updateQuantity);
-router.put('/cart/items/:id/checked', authMiddleware, CartController.updateChecked);
+router.put('/cart/items/:id', authMiddleware, idParamValidation, CartController.updateQuantity);
+router.put('/cart/items/:id/checked', authMiddleware, idParamValidation, CartController.updateChecked);
 router.put('/cart/checked', authMiddleware, CartController.updateAllChecked);
-router.delete('/cart/items/:id', authMiddleware, CartController.delete);
+router.delete('/cart/items/:id', authMiddleware, idParamValidation, CartController.delete);
 router.delete('/cart', authMiddleware, CartController.clear);
 
 // 地址
-router.get('/addresses', authMiddleware, AddressController.list);
-router.get('/addresses/:id', authMiddleware, AddressController.detail);
+router.get('/addresses', authMiddleware, paginationValidation, AddressController.list);
+router.get('/addresses/:id', authMiddleware, idParamValidation, AddressController.detail);
 router.post('/addresses', authMiddleware, AddressController.create);
-router.put('/addresses/:id', authMiddleware, AddressController.update);
-router.delete('/addresses/:id', authMiddleware, AddressController.delete);
-router.put('/addresses/:id/default', authMiddleware, AddressController.setDefault);
+router.put('/addresses/:id', authMiddleware, idParamValidation, AddressController.update);
+router.delete('/addresses/:id', authMiddleware, idParamValidation, AddressController.delete);
+router.put('/addresses/:id/default', authMiddleware, idParamValidation, AddressController.setDefault);
 
 // 订单
-router.post('/orders', authMiddleware, OrderController.create);
-router.post('/orders/pay', authMiddleware, OrderController.pay);
-router.post('/orders/cancel', authMiddleware, OrderController.cancel);
-router.post('/orders/confirm', authMiddleware, OrderController.confirmReceipt);
-router.get('/orders', authMiddleware, OrderController.list);
-router.get('/orders/:id', authMiddleware, OrderController.detail);
+router.post('/orders', authMiddleware, sensitiveLimiter, orderCreateValidation, OrderController.create);
+router.post('/orders/pay', authMiddleware, sensitiveLimiter, OrderController.pay);
+router.post('/orders/cancel', authMiddleware, sensitiveLimiter, OrderController.cancel);
+router.post('/orders/confirm', authMiddleware, sensitiveLimiter, OrderController.confirmReceipt);
+router.get('/orders', authMiddleware, paginationValidation, OrderController.list);
+router.get('/orders/:id', authMiddleware, idParamValidation, OrderController.detail);
+
+// 微信支付回调（无需认证）
+router.post('/pay/notify', OrderController.payCallback);
 
 module.exports = router;

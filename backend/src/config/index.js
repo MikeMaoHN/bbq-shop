@@ -10,7 +10,12 @@ module.exports = {
 
   // JWT 配置
   jwt: {
-    secret: process.env.JWT_SECRET || 'default_secret_change_in_production',
+    secret: process.env.JWT_SECRET || (() => {
+      if (process.env.NODE_ENV === 'production') {
+        throw new Error('生产环境必须配置 JWT_SECRET 环境变量，建议使用 crypto.randomBytes(32).toString("hex") 生成');
+      }
+      return 'dev_only_secret_not_for_production';
+    })(),
     expiresIn: process.env.JWT_EXPIRES_IN || '7d'
   },
 
@@ -25,7 +30,11 @@ module.exports = {
   wxPay: {
     mchid: process.env.WX_MCHID || '',
     apikey: process.env.WX_APIKEY || '',
-    notifyUrl: process.env.WX_NOTIFY_URL || ''
+    notifyUrl: process.env.WX_NOTIFY_URL || '',
+    serialNo: process.env.WX_SERIAL_NO || '',
+    privateKeyPath: process.env.WX_PRIVATE_KEY_PATH || './certs/apiclient_key.pem',
+    // 支付模式：MOCK(模拟) | REAL(真实)
+    mode: process.env.PAYMENT_MODE || 'MOCK'
   },
 
   // 文件上传配置
